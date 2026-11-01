@@ -76,7 +76,7 @@ Chương 3 là kết quả phân tích thiết kế: nó quy định hệ thốn
 
 - Hệ thống chỉ có **3 tác nhân**: Sinh viên CNTT, Giáo vụ khoa, Quản trị viên. Gemini API **không** còn là tác nhân ngoài; nó là thành phần bên trong hệ thống.
 - Quản trị viên cấu hình dịch vụ AI qua chức năng mới **UC21 Cấu hình dịch vụ AI** (module M4 Quản trị).
-- ERD có thêm tập thực thể **Cấu hình AI** (Người dùng 1 — n Cấu hình AI, tham gia toàn phần); biểu đồ lớp có thêm lớp `AIConfig` (`model`, `apiKey`, `update()`) và phương thức `User.configureAI()`.
+- ERD có thêm tập thực thể **Cấu hình AI** (Người dùng 1 — n Cấu hình AI, tham gia toàn phần); biểu đồ lớp có thêm lớp `AIConfiguration` (`model`, `apiKey`, `update()`) và phương thức `User.configureAI()`.
 
 ### Hiện trạng
 
@@ -110,8 +110,8 @@ Biểu đồ lớp đặt tên phương thức thống nhất bằng tiếng Anh
 | Document | `upload()` | `documents.service.create` |
 | Document | `update()`, `remove()`, `retry()` | giữ nguyên |
 | IngestJob | `process()` | `worker/ingest.worker.chayMotLuot` |
-| Chunk | `split()` | `rag/chunk.catDoan` |
-| Chunk | `search()` | `retrieval.service.search` |
+| DocumentChunk | `split()` | `rag/chunk.catDoan` |
+| DocumentChunk | `search()` | `retrieval.service.search` |
 
 Mục này ưu tiên thấp hơn mục 1 và 2: chỉ đổi tên, có thể làm sau cùng.
 
