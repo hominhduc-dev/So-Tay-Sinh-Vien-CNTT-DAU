@@ -96,22 +96,29 @@ Chương 3 là kết quả phân tích thiết kế: nó quy định hệ thốn
 
 ## 3. Tên phương thức theo biểu đồ lớp
 
-Biểu đồ lớp đặt tên phương thức thống nhất bằng tiếng Anh. Mã hiện tại trộn tên tiếng Việt và tiếng Anh.
+Biểu đồ lớp đặt tên phương thức thống nhất bằng tiếng Anh, theo cú pháp UML
+`+tên(in tham số: kiểu): kiểu trả về`. Mã hiện tại trộn tên tiếng Việt và tiếng Anh.
 Đổi tên để code đọc khớp thiết kế (không đổi hành vi):
 
 | Lớp | Thiết kế | Hiện tại |
 |---|---|---|
-| User | `login()` | `auth.service.login` |
-| User | `changePassword()` | `auth.service.changePassword` |
-| User | `assignRole()` | `admin.service.ganThanhVien` + `goThanhVien` (gộp, xem mục 1) |
-| Conversation | `list()` | `chat.service.danhSachHoiThoai` |
-| Conversation | `getDetail()` | `chat.service.chiTietHoiThoai` |
-| Message | `ask()` | `chat.service.hoi` |
-| Document | `upload()` | `documents.service.create` |
-| Document | `update()`, `remove()`, `retry()` | giữ nguyên |
-| IngestJob | `process()` | `worker/ingest.worker.chayMotLuot` |
-| DocumentChunk | `split()` | `rag/chunk.catDoan` |
-| DocumentChunk | `search()` | `retrieval.service.search` |
+| Department | `getDocuments(): Document[]`, `getMembers(): User[]` | truy vấn trong `admin.service`, `documents.service` |
+| User | `login(in pwd: string): boolean` | `auth.service.login` |
+| User | `assignRole(in role: Role): void` | `admin.service.ganThanhVien` + `goThanhVien` (gộp, xem mục 1) |
+| AIConfiguration | `update(in model: string): void`, `getModel(): string` | chưa có (xem mục 2) |
+| Conversation | `addMessage(in m: Message): void` | ghi tin nhắn trong `chat.service.hoi` |
+| Conversation | `getMessages(): Message[]` | `chat.service.chiTietHoiThoai` |
+| Message | `ask(in question: string): Message` | `chat.service.hoi` |
+| Message | `getCitations(): MessageCitation[]` | đọc kèm trong `chat.service.chiTietHoiThoai` |
+| MessageCitation | `getSource(): DocumentChunk` | `documents.service.listChunks` |
+| Document | `upload(in file: File): void` | `documents.service.create` |
+| Document | `retry(): void` | `documents.service.retry` |
+| IngestJob | `run(): void` | `worker/ingest.worker.chayMotLuot` |
+| IngestJob | `markFailed(in error: string): void` | xử lý lỗi trong `ingest.worker` |
+| DocumentChunk | `embed(in model: string): void` | `rag/embed.nhungTaiLieu` |
+| DocumentChunk | `getText(): string` | đọc trực tiếp cột `content` |
+
+Các thao tác còn lại (đổi mật khẩu, sửa/gỡ tài liệu, truy hồi) giữ tên hiện tại; biểu đồ lớp chỉ ghi phương thức tiêu biểu.
 
 Mục này ưu tiên thấp hơn mục 1 và 2: chỉ đổi tên, có thể làm sau cùng.
 
