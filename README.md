@@ -22,6 +22,7 @@ Docker Compose.
 
 | Tệp | Nội dung |
 |---|---|
+| [`docs/SRS.md`](docs/SRS.md) | Đặc tả yêu cầu phần mềm: phạm vi, tác nhân, đặc tả từng use case, yêu cầu dữ liệu, giao diện, phi chức năng, quy tắc nghiệp vụ, ma trận truy vết |
 | [`docs/DAC-TA-TRIEN-KHAI.md`](docs/DAC-TA-TRIEN-KHAI.md) | **Đặc tả chính thức**: use case, quy tắc nghiệp vụ, lược đồ CSDL, API REST, luồng xử lý, hướng dẫn Spring Boot, kịch bản kiểm thử |
 | [`docs/slides/SRS-tac-nhan-va-use-case.pptx`](docs/slides/SRS-tac-nhan-va-use-case.pptx) | Slide SRS: tác nhân, đối tượng tham gia, use case, ma trận quyền, input/output, luồng |
 | Slide Chương 3 (artifact) | BFD, IFD, DFD, ERD, biểu đồ lớp, CSDL |
