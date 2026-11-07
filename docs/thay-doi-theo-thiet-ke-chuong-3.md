@@ -20,7 +20,7 @@ vụ, quản trị viên) gửi request, server trả response; CSDL và mọi x
 | Nội dung trả lời | Sinh từ tài liệu đã nhúng | Giáo vụ soạn ở **UC22 Quản lý chủ đề**, **UC23 Quản lý câu hỏi – trả lời** |
 | Tài liệu | Tải lên → worker cắt đoạn, nhúng vector, trạng thái PENDING/READY/FAILED | Chỉ lưu tệp làm **nguồn trích dẫn**; không xử lý, không trạng thái |
 | Đơn vị, vai trò | Bảng `departments` + `department_members` (M:N, vai theo đơn vị) | Thuộc tính `department` và `role` **trên `users`** |
-| CSDL | 18 bảng (kể cả chunks, embeddings, jobs, citations, eval) | **6 bảng**: `users`, `topics`, `questions`, `documents`, `conversations`, `messages` |
+| CSDL | 15 bảng (kể cả chunks, embeddings, jobs, citations, eval) | **6 bảng**: `users`, `topics`, `questions`, `documents`, `conversations`, `messages` |
 
 Use case giữ nguyên: UC01–UC08, UC10–UC12, UC14–UC16, UC20.
 **Bỏ:** UC09 Theo dõi xử lý, UC13 Chạy lại khi lỗi, UC18 Tra cứu qua API, UC19 Đánh giá truy hồi,
