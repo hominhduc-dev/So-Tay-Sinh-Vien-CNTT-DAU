@@ -15,7 +15,7 @@ Chương 3 là kết quả phân tích thiết kế: nó quy định hệ thốn
 - Mỗi người dùng **thuộc đúng một đơn vị** (Đơn vị 1 — N Người dùng).
 - Mỗi người dùng có **đúng một vai trò**: `USER | CONTENT_ADMIN | SYSTEM_ADMIN`, lưu ngay trên `users`.
 - Phân quyền (UC16) là **đổi vai trò của một tài khoản**: `User.assignRole()`.
-- Bỏ `department_members` (−1 bảng); cộng thêm bảng cấu hình AI ở mục 2 (+1 bảng), CSDL vẫn **15 bảng**, 5 enum (`member_role` giữ nguyên giá trị, có thể đổi tên thành `role`).
+- Bỏ `department_members` (−1 bảng); cộng thêm bảng cấu hình AI ở mục 2 (+1 bảng), CSDL còn **10 bảng** sau khi bỏ thêm 5 bảng đánh giá ở mục 5, 5 enum (`member_role` giữ nguyên giá trị, có thể đổi tên thành `role`).
 
 ### Hiện trạng
 
@@ -50,7 +50,7 @@ Chương 3 là kết quả phân tích thiết kế: nó quy định hệ thốn
 | `types/express.d.ts` | `AuthenticatedUser`: một `role`, một `department`; bỏ danh sách `departments`. |
 | `modules/auth/auth.service.ts`, `auth.controller.ts` | Bỏ `MembershipDto`, `toMembershipDtos`. `login` và `GET /auth/me` trả `{ token?, user }`, trong `user` có `role` và `department`. |
 | `modules/admin/admin.service.ts`, `admin.schema.ts`, `admin.route.ts` | Thay `ganThanhVien` / `goThanhVien` bằng `assignRole(userId, role)`. API mới: `PATCH /api/users/:id` nhận `{ role?, isActive? }`. Bỏ `POST/DELETE /api/departments/:id/members`. Giữ BR04: không tự khóa, không tự hạ vai. |
-| `eval/run-eval.ts` | Tạo người dùng giả lập với `role`, không còn `departments[]`. |
+| `eval/run-eval.ts` | Bỏ cùng bộ đánh giá (mục 5); nếu giữ làm công cụ nội bộ thì tạo người dùng giả lập với `role`. |
 | Test (`*.test.ts`) | Cập nhật fixture tạo user; thêm test: đổi vai có hiệu lực ở request kế tiếp, chặn tự hạ vai. |
 
 **Frontend — `web/src/features/`**
@@ -64,7 +64,7 @@ Chương 3 là kết quả phân tích thiết kế: nó quy định hệ thốn
 
 **Tài liệu — `docs/`**
 
-- `erd.md`: quan hệ users — departments 1:N, bỏ `department_members`, thêm `ai_configs` (mục 2), tổng 15 bảng.
+- `erd.md`: quan hệ users — departments 1:N, bỏ `department_members`, thêm `ai_configs` (mục 2), bỏ 5 bảng đánh giá (mục 5), tổng 10 bảng.
 - `api-contract.md`: sửa mục đăng nhập / `me` (bỏ `memberships`), mục quản trị (thêm `PATCH /users/:id`, bỏ `/departments/:id/members`).
 - `phan-quyen.md`, `use-cases/README.md` (UC16): phân quyền = đổi vai của tài khoản.
 
@@ -120,26 +120,41 @@ Mục này ưu tiên thấp hơn mục 1 và 2: chỉ đổi tên, có thể là
 
 ---
 
-## 4. Năm module theo BFD
+## 4. Bốn module theo BFD
 
-BFD chia hệ thống thành 5 module. Cấu trúc thư mục `server/src/modules/` nên khớp với cách chia này:
+BFD chia hệ thống thành 4 module. Cấu trúc thư mục `server/src/modules/` nên khớp với cách chia này:
 
 | Module (BFD) | Use case | Thư mục hiện tại | Việc cần làm |
 |---|---|---|---|
 | M1 · Tài khoản | UC01–UC04 | `modules/auth` | Giữ nguyên |
-| M2 · Hỏi đáp | UC05, UC06, UC08 | `modules/chat` | Giữ nguyên |
+| M2 · Hỏi đáp | UC05, UC06, UC08 | `modules/chat` | Giữ nguyên; truy hồi tài liệu (`modules/retrieval`) là phần xử lý bên trong của M2, không có API riêng |
 | M3 · Tài liệu | UC07, UC09–UC13 | `modules/documents`, `worker/` | Giữ nguyên; worker là phần xử lý nền của M3 |
-| M4 · Quản trị | UC14–UC16, UC21 | `modules/admin` | Áp dụng mục 1 (phân quyền = đổi `users.role`) và mục 2 (cấu hình AI) |
-| M5 · Vận hành | UC18–UC20 | `modules/retrieval`, `eval/`, route `/health` | Gom về một module `operations` (hoặc ghi rõ ánh xạ trong `docs/cau-truc-thu-muc.md`) |
+| M4 · Quản trị | UC14–UC16, UC20, UC21 | `modules/admin`, route `/health` | Áp dụng mục 1 (phân quyền = đổi `users.role`) và mục 2 (cấu hình AI) |
 
-So với phần SRS (4 phân hệ PH1–PH4), phân hệ PH1 được tách thành M1 Tài khoản và M4 Quản trị.
+So với phần SRS (4 phân hệ PH1–PH4), phân hệ PH1 được tách thành M1 Tài khoản và M4 Quản trị; phân hệ PH4 Vận hành kỹ thuật bị bỏ, UC20 chuyển vào M4 (xem mục 5).
 
 ---
 
-## 5. Thứ tự đề xuất
+## 5. Bỏ UC18 (tra cứu lai qua API) và UC19 (đánh giá truy hồi)
 
-1. Mục 1 và 2 — CSDL: schema + migration + check (bỏ `department_members`, thêm `ai_configs`), chạy trên DB thử nghiệm riêng.
-2. Mục 1 và 2 — backend, rồi frontend; chạy toàn bộ test.
+### Thiết kế
+
+- BFD không còn UC18, UC19 và module Vận hành. CSDL còn **10 bảng**: bỏ 5 bảng của bộ đánh giá truy hồi.
+- Truy hồi tài liệu vẫn chạy bên trong hỏi đáp (UC05), chỉ không mở ra thành API riêng.
+
+### Việc cần làm
+
+1. **UC18:** bỏ `routes.use(retrievalRouter)` trong `server/src/routes.ts` (endpoint `POST /api/search`), bỏ `retrieval.controller.ts`, `retrieval.route.ts`, `retrieval.schema.ts`. **Giữ** `retrieval.service.ts`, `retrieval.sql.ts` vì `chat.service.ts` và `rag/prompt.ts` dùng chúng. Xóa mục `/search` trong `docs/api-contract.md`.
+2. **UC19:** bỏ thư mục `server/src/eval/` và script `"eval"` trong `server/package.json`; bỏ 5 model `EvalSet`, `EvalQuestion`, `EvalGoldChunk`, `EvalRun`, `EvalResult` trong `schema.prisma` bằng một migration xóa bảng; bỏ tên các bảng này khỏi `prisma/check.ts`.
+   - Nếu nhóm vẫn muốn đo chất lượng truy hồi khi phát triển, có thể giữ bộ đánh giá như công cụ nội bộ ngoài thiết kế; khi đó ghi rõ trong `docs/` rằng nó không thuộc hệ thống bàn giao.
+3. **Tài liệu:** `use-cases/README.md` đánh dấu UC18, UC19 là đã bỏ; `erd.md` tổng số bảng 10.
+
+---
+
+## 6. Thứ tự đề xuất
+
+1. Mục 1, 2 và 5 — CSDL: schema + migration + check (bỏ `department_members`, thêm `ai_configs`, bỏ 5 bảng đánh giá), chạy trên DB thử nghiệm riêng.
+2. Mục 1, 2 và 5 — backend, rồi frontend; chạy toàn bộ test.
 3. Cập nhật tài liệu trong `docs/`.
 4. Mục 3 — đổi tên phương thức.
 5. Kiểm thử lại trên DB thử nghiệm theo ba vai (đăng nhập, hỏi đáp, tải tài liệu, khóa tài khoản, đổi cấu hình AI) trước khi áp dụng cho DB thật.
