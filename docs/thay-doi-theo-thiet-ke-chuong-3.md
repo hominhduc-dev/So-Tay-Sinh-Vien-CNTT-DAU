@@ -6,6 +6,9 @@ Chương 3 là kết quả phân tích thiết kế: nó quy định hệ thốn
 được viết trước bản thiết kế này nên lệch nhiều chỗ. Tài liệu này liệt kê từng chỗ lệch và việc cần làm
 để đưa project về đúng thiết kế. Khi thiết kế và mã nguồn khác nhau, **thiết kế là chuẩn**.
 
+> Tài liệu này hướng dẫn sửa **mã Node/TypeScript hiện tại**. Nếu hiện thực lại bằng Java Spring Boot,
+> đọc [`DAC-TA-TRIEN-KHAI.md`](DAC-TA-TRIEN-KHAI.md) — đặc tả chính thức, đầy đủ lược đồ, API và luồng.
+
 **Mức thiết kế: client–server.** Thiết kế chỉ mô tả hai tầng: client (trình duyệt của sinh viên, giáo
 vụ, quản trị viên) gửi request, server trả response; CSDL và mọi xử lý nằm ở server.
 
@@ -35,9 +38,9 @@ UC21 Cấu hình dịch vụ AI. **Thêm:** UC22 Quản lý chủ đề, UC23 Qu
 | Bảng | Cột chính | Ràng buộc |
 |---|---|---|
 | `users` | `id`, `email`, `password_hash`, `full_name`, `role` (`USER`/`CONTENT_ADMIN`/`SYSTEM_ADMIN`), `department` (text, ví dụ `CNTT`), `is_active` | `email` duy nhất |
-| `topics` | `id`, `name`, `sort_order` | — |
-| `questions` | `id`, `topic_id`, `content` (chữ trên nút), `answer` (câu trả lời soạn sẵn), `document_id`, `page`, `is_active` | `topic_id` → `topics` **RESTRICT**; `document_id` → `documents` **RESTRICT**, cho phép NULL |
-| `documents` | `id`, `title`, `file_path`, `file_hash`, `mime_type`, `page_count`, `uploaded_by` | `file_hash` duy nhất; `uploaded_by` → `users` |
+| `topics` | `id`, `name`, `sort_order` | `name` duy nhất |
+| `questions` | `id`, `topic_id`, `content` (chữ trên nút), `answer` (câu trả lời soạn sẵn), `document_id`, `page`, `is_active` | `topic_id` → `topics` **RESTRICT**; `document_id` → `documents` **RESTRICT**, bắt buộc (BR06) |
+| `documents` | `id`, `title`, `file_url`, `file_hash`, `mime_type`, `page_count`, `uploaded_by` | `file_hash` duy nhất; `uploaded_by` → `users` |
 | `conversations` | `id`, `user_id`, `title`, `created_at` | `user_id` → `users` CASCADE |
 | `messages` | `id`, `conversation_id`, `question_id`, `sent_at` | `conversation_id` → `conversations` **CASCADE**; `question_id` → `questions` RESTRICT |
 
