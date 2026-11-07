@@ -113,12 +113,10 @@ Biểu đồ lớp đặt tên phương thức thống nhất bằng tiếng Anh
 | MessageCitation | `getSource(): DocumentChunk` | `documents.service.listChunks` |
 | Document | `upload(in file: File): void` | `documents.service.create` |
 | Document | `retry(): void` | `documents.service.retry` |
-| IngestJob | `run(): void` | `worker/ingest.worker.chayMotLuot` |
-| IngestJob | `markFailed(in error: string): void` | xử lý lỗi trong `ingest.worker` |
 | DocumentChunk | `embed(in model: string): void` | `rag/embed.nhungTaiLieu` |
 | DocumentChunk | `getText(): string` | đọc trực tiếp cột `content` |
 
-Các thao tác còn lại (đổi mật khẩu, sửa/gỡ tài liệu, truy hồi) giữ tên hiện tại; biểu đồ lớp chỉ ghi phương thức tiêu biểu.
+Các thao tác còn lại (đổi mật khẩu, sửa/gỡ tài liệu, truy hồi) giữ tên hiện tại; biểu đồ lớp chỉ ghi phương thức tiêu biểu. Hàng đợi xử lý nền (`ingest_jobs`, `worker/ingest.worker.ts`) là thành phần kỹ thuật, không có trong ERD và biểu đồ lớp; giữ nguyên trong mã nguồn.
 
 Mục này ưu tiên thấp hơn mục 1 và 2: chỉ đổi tên, có thể làm sau cùng.
 
