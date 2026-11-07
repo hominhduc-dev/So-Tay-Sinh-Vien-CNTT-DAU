@@ -6,6 +6,13 @@ Chương 3 là kết quả phân tích thiết kế: nó quy định hệ thốn
 được viết trước bản thiết kế này nên có chỗ lệch. Tài liệu này liệt kê từng chỗ lệch và việc cần làm
 để đưa project về đúng thiết kế. Khi thiết kế và mã nguồn khác nhau, **thiết kế là chuẩn**.
 
+**Mức thiết kế: client–server.** Chương 3 chỉ mô tả hai tầng: client (trình duyệt của sinh viên,
+giáo vụ, quản trị viên) gửi request và server trả response; CSDL và mọi xử lý nằm ở server. Phần
+xử lý bên trong server (worker nạp tài liệu, đoạn văn và vector, hàng đợi `ingest_jobs`, pgvector)
+không xuất hiện trong thiết kế. Vì vậy CSDL trong thiết kế có **7 bảng** ứng với 7 thực thể ERD;
+3 bảng `chunks`, `chunk_embeddings`, `ingest_jobs` vẫn giữ trong mã nguồn (tổng **10 bảng** ở các
+mục dưới) và **không** tính là chỗ lệch cần sửa.
+
 ---
 
 ## 1. Vai trò lưu trên người dùng, bỏ bảng nối `department_members`
