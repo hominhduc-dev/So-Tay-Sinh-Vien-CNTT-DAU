@@ -106,15 +106,15 @@ Biểu đồ lớp đặt tên phương thức thống nhất bằng tiếng Anh
 | User | `login(in pwd: string): boolean` | `auth.service.login` |
 | User | `assignRole(in role: Role): void` | `admin.service.ganThanhVien` + `goThanhVien` (gộp, xem mục 1) |
 | AIConfiguration | `update(in model: string): void`, `getModel(): string` | chưa có (xem mục 2) |
-| Conversation | `addMessage(in m: Message): void` | ghi tin nhắn trong `chat.service.hoi` |
+| Conversation | `ask(in question: string): Message` | `chat.service.hoi` |
 | Conversation | `getMessages(): Message[]` | `chat.service.chiTietHoiThoai` |
-| Message | `ask(in question: string): Message` | `chat.service.hoi` |
+| Message | `getContent(): string` | đọc trực tiếp cột `content` |
 | Message | `getCitations(): MessageCitation[]` | đọc kèm trong `chat.service.chiTietHoiThoai` |
 | MessageCitation | `getSource(): DocumentChunk` | `documents.service.listChunks` |
 | Document | `upload(in file: File): void` | `documents.service.create` |
 | Document | `retry(): void` | `documents.service.retry` |
-| DocumentChunk | `embed(in model: string): void` | `rag/embed.nhungTaiLieu` |
 | DocumentChunk | `getText(): string` | đọc trực tiếp cột `content` |
+| DocumentChunk | `getDocument(): Document` | quan hệ `chunks.document_id` |
 
 Các thao tác còn lại (đổi mật khẩu, sửa/gỡ tài liệu, truy hồi) giữ tên hiện tại; biểu đồ lớp chỉ ghi phương thức tiêu biểu. Hàng đợi xử lý nền (`ingest_jobs`, `worker/ingest.worker.ts`) là thành phần kỹ thuật, không có trong ERD và biểu đồ lớp; giữ nguyên trong mã nguồn.
 
