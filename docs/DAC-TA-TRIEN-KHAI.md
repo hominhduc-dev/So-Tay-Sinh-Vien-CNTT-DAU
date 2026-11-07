@@ -146,7 +146,7 @@ CREATE TABLE documents (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     title       varchar(500) NOT NULL,
     file_url    varchar(500) NOT NULL,                   -- đường dẫn tương đối trong thư mục lưu tệp
-    file_hash   char(64)     NOT NULL UNIQUE,            -- SHA-256, chặn tải trùng
+    file_hash   varchar(64)  NOT NULL UNIQUE,            -- SHA-256, chặn tải trùng
     mime_type   varchar(100) NOT NULL,
     page_count  integer,                                 -- NULL với DOCX
     uploaded_by uuid         NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
@@ -198,7 +198,7 @@ Ghi chú thiết kế:
   dẫn tới (kể cả câu hỏi đã ẩn).
 - `topics` RESTRICT: không xóa được chủ đề còn câu hỏi.
 
-### 5.3. Dữ liệu mẫu — `V2__seed.sql`
+### 5.3. Dữ liệu mẫu — `db/demo/V2__demo_data.sql`
 
 Tạo một tài khoản mỗi vai (`department = 'CNTT'`, mật khẩu BCrypt) và 6 chủ đề: Đăng ký học phần,
 Đồ án tốt nghiệp, Chuẩn đầu ra, Bảo lưu – nghỉ học, Cảnh báo học vụ, Xét tốt nghiệp. Câu hỏi mẫu cần
@@ -409,7 +409,9 @@ server-java/
     │   └── admin/             # M4: AdminController (users), HealthController, AdminService
     └── resources/
         ├── application.yml
-        └── db/migration/      # V1__init.sql, V2__seed.sql
+        └── db/
+            ├── migration/     # V1__init.sql — lược đồ
+            └── demo/          # V2__demo_data.sql — tắt bằng FLYWAY_LOCATIONS khi triển khai thật
 ```
 
 Mỗi package ứng với một module của BFD. Controller chỉ nhận/trả DTO (`record`); entity không lộ ra JSON.

@@ -29,5 +29,7 @@ Docker Compose.
 
 ## Trạng thái
 
-Mã nguồn bản cũ (Node.js/Next.js, RAG với Gemini) đã được gỡ khỏi nhánh này; vẫn xem lại được trong
-lịch sử git. Server Spring Boot sẽ được hiện thực trong thư mục `server-java/` theo mục 8 của đặc tả.
+- **Server:** [`server-java/`](server-java/README.md) — Spring Boot, đủ 17 use case, 15 kiểm thử tích hợp.
+  Chạy: `cp .env.example .env` rồi `docker compose up --build`.
+- **Web client:** chưa có; client gọi REST API theo `DAC-TA-TRIEN-KHAI.md` mục 6.
+- Mã nguồn bản cũ (Node.js/Next.js, RAG với Gemini) đã gỡ; vẫn xem lại được trong lịch sử git.

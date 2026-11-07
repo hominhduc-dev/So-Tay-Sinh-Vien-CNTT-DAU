@@ -1,0 +1,36 @@
+# Chạy toàn bộ server: docker compose up --build
+# Cấu hình bằng tệp .env cùng thư mục (chép từ .env.example).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: tangthu
+      POSTGRES_USER: tangthu
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Đặt DB_PASSWORD trong .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tangthu -d tangthu"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: ./server-java
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/tangthu
+      DB_USER: tangthu
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Đặt JWT_SECRET (≥ 32 ký tự) trong .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      FLYWAY_LOCATIONS: ${FLYWAY_LOCATIONS:-classpath:db/migration,classpath:db/demo}
+    volumes:
+      - storage:/data/storage
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata: {}
+  storage: {}

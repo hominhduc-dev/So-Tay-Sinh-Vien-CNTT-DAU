@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: ${TEST_DATABASE_URL:jdbc:postgresql://localhost:5432/tangthu_test}
+    username: ${TEST_DB_USER:tangthu}
+    password: ${TEST_DB_PASSWORD:tangthu}
+  flyway:
+    locations: classpath:db/migration
+app:
+  jwt:
+    secret: test-secret-for-integration-tests-only-0123456789
+    ttl: PT1H
+  storage-dir: target/test-storage
