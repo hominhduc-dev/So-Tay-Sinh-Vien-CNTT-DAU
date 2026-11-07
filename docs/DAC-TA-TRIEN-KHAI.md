@@ -4,9 +4,9 @@
 **Nguồn thiết kế:** slide Chương 3 (BFD, IFD, DFD, ERD, biểu đồ lớp, CSDL) và
 `docs/slides/SRS-tac-nhan-va-use-case.pptx`.
 
-Đây là **tài liệu chính thức** để hiện thực server bằng Java Spring Boot. Khi tài liệu này khác các
-tệp cũ trong `docs/` (`THIET-KE-HE-THONG.md`, `erd.md`, `api-contract.md`, `use-cases/`,
-`phan-quyen.md` — vẫn mô tả bản RAG cũ dùng Gemini, pgvector, SSE), **làm theo tài liệu này**.
+Đây là **tài liệu chính thức** để hiện thực server bằng Java Spring Boot. Thiết kế RAG cũ (Gemini,
+pgvector, SSE) và mã Node.js đã gỡ khỏi repo; khi có mâu thuẫn với bất kỳ tài liệu nào khác,
+**làm theo tài liệu này**.
 
 ---
 

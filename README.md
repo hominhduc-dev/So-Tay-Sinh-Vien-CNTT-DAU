@@ -1,42 +1,32 @@
 # Sổ Tay Sinh Viên CNTT
 
-Hệ thống hỏi đáp học vụ cho sinh viên **ngành Công nghệ Thông tin, Trường Đại học Kiến trúc Đà Nẵng**. Đồ án học phần **Lập trình mạng máy tính**.
+Hệ thống hỏi đáp học vụ cho sinh viên **ngành Công nghệ Thông tin, Trường Đại học Kiến trúc Đà Nẵng**.
+Đồ án học phần **Lập trình mạng máy tính** — mô hình client–server.
 
-Hỏi bằng tiếng Việt, nhận câu trả lời kèm nguồn trong tài liệu CNTT và quy định chung áp dụng cho CNTT. Không tra cứu điểm số, lịch học hoặc dữ liệu cá nhân.
+Sinh viên tra cứu quy định học vụ (đăng ký học phần, đồ án, chuẩn đầu ra, bảo lưu, cảnh báo học vụ,
+xét tốt nghiệp) qua **chatbot dạng nút chọn**: chọn chủ đề → chọn câu hỏi → nhận câu trả lời do giáo vụ
+soạn sẵn, kèm tài liệu nguồn và số trang. Hệ thống không dùng AI.
 
-## Phạm vi hiện hành
+## Vai trò
 
-- `USER`: hỏi đáp, tài liệu, nguồn trích dẫn, hội thoại cá nhân.
-- `CONTENT_ADMIN`: thêm quyền quản lý tài liệu và xử lý lại lỗi.
-- `SYSTEM_ADMIN`: thêm quyền quản lý tài khoản và phân quyền.
+- `USER` — Sinh viên CNTT: chọn câu hỏi, xem nguồn, xem lại hội thoại, tra cứu tài liệu.
+- `CONTENT_ADMIN` — Giáo vụ khoa: thêm quản lý tài liệu, chủ đề, câu hỏi – câu trả lời.
+- `SYSTEM_ADMIN` — Quản trị viên: thêm quản lý tài khoản, phân quyền, kiểm tra trạng thái hệ thống.
 
-Cả ba vai có cùng kho tri thức CNTT. Không quản trị nhiều khoa; không có nhánh quản trị đọc dữ liệu khoa khác.
+## Công nghệ
 
-## Nội dung kỹ thuật
-
-Next.js + Express + PostgreSQL/pgvector. REST và SSE; nạp PDF/DOCX bằng worker; truy hồi lai và trích dẫn bắt buộc. Module `server/src/netlab/` minh họa TCP/HTTP tự viết, framing, nhiều client, Content-Length UTF-8 và kết nối LAN.
-
-## Chạy dự án
-
-```powershell
-corepack pnpm install
-# Cấu hình .env gốc cho Docker và server/.env cho ứng dụng.
-corepack pnpm --filter @tang-thu/server db:generate
-# DB mới: migrate rồi nạp dữ liệu demo.
-corepack pnpm --filter @tang-thu/server db:deploy
-corepack pnpm --filter @tang-thu/server db:seed
-corepack pnpm dev
-```
-
-Có thể chạy qua `docker compose up --build`. Với CSDL đang có, đọc hướng dẫn nâng cấp trước; không chạy seed để thay đổi dữ liệu thật. Migration không tự cấp quản trị viên đầu tiên.
+Java 21 · Spring Boot 3.3 (Web, Data JPA, Security, Validation) · PostgreSQL 16 · Flyway · JWT ·
+Docker Compose.
 
 ## Tài liệu
 
-- [Phạm vi CNTT, ba vai và hướng dẫn nâng cấp](docs/PHAM-VI-CNTT.md)
-- [Phân quyền hiện hành](docs/phan-quyen.md)
-- [Sơ đồ use case](docs/use-cases/tang-thu-use-case.html)
-- [Trạng thái công việc](agent/STATUS.md)
-- [Handoff cho phiên tiếp theo](agent/HANDOFF.md)
-- [Thiết kế nền tảng v2 — tham khảo kỹ thuật](docs/THIET-KE-HE-THONG.md)
+| Tệp | Nội dung |
+|---|---|
+| [`docs/DAC-TA-TRIEN-KHAI.md`](docs/DAC-TA-TRIEN-KHAI.md) | **Đặc tả chính thức**: use case, quy tắc nghiệp vụ, lược đồ CSDL, API REST, luồng xử lý, hướng dẫn Spring Boot, kịch bản kiểm thử |
+| [`docs/slides/SRS-tac-nhan-va-use-case.pptx`](docs/slides/SRS-tac-nhan-va-use-case.pptx) | Slide SRS: tác nhân, đối tượng tham gia, use case, ma trận quyền, input/output, luồng |
+| Slide Chương 3 (artifact) | BFD, IFD, DFD, ERD, biểu đồ lớp, CSDL |
 
-Chưa có màn/API tạo tài khoản và đánh giá qua web; cấp tài khoản demo qua seed, đánh giá qua CLI. SSO, OCR, quản trị nhiều đơn vị và quản lý đào tạo ngoài phạm vi học phần.
+## Trạng thái
+
+Mã nguồn bản cũ (Node.js/Next.js, RAG với Gemini) đã được gỡ khỏi nhánh này; vẫn xem lại được trong
+lịch sử git. Server Spring Boot sẽ được hiện thực trong thư mục `server-java/` theo mục 8 của đặc tả.
