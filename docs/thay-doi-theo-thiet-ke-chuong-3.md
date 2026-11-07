@@ -110,13 +110,11 @@ Biểu đồ lớp đặt tên phương thức thống nhất bằng tiếng Anh
 | Conversation | `getMessages(): Message[]` | `chat.service.chiTietHoiThoai` |
 | Message | `getContent(): string` | đọc trực tiếp cột `content` |
 | Message | `getCitations(): MessageCitation[]` | đọc kèm trong `chat.service.chiTietHoiThoai` |
-| MessageCitation | `getSource(): DocumentChunk` | `documents.service.listChunks` |
+| MessageCitation | `getSource(): Document` | `documents.service.get` (kèm trang, câu trích lưu trên trích dẫn) |
 | Document | `upload(in file: File): void` | `documents.service.create` |
 | Document | `retry(): void` | `documents.service.retry` |
-| DocumentChunk | `getText(): string` | đọc trực tiếp cột `content` |
-| DocumentChunk | `getDocument(): Document` | quan hệ `chunks.document_id` |
 
-Các thao tác còn lại (đổi mật khẩu, sửa/gỡ tài liệu, truy hồi) giữ tên hiện tại; biểu đồ lớp chỉ ghi phương thức tiêu biểu. Hàng đợi xử lý nền (`ingest_jobs`, `worker/ingest.worker.ts`) là thành phần kỹ thuật, không có trong ERD và biểu đồ lớp; giữ nguyên trong mã nguồn.
+Các thao tác còn lại (đổi mật khẩu, sửa/gỡ tài liệu, truy hồi) giữ tên hiện tại; biểu đồ lớp chỉ ghi phương thức tiêu biểu. Đoạn văn và vector (`chunks`, `chunk_embeddings`) cùng hàng đợi xử lý nền (`ingest_jobs`, `worker/ingest.worker.ts`) là thành phần kỹ thuật, không có trong ERD và biểu đồ lớp; giữ nguyên trong mã nguồn và CSDL.
 
 Mục này ưu tiên thấp hơn mục 1 và 2: chỉ đổi tên, có thể làm sau cùng.
 
