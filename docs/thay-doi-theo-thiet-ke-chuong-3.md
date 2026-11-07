@@ -1,167 +1,159 @@
 # Thay đổi cần áp dụng vào project theo thiết kế Chương 3
 
-**Ngày lập:** 31/10/2026 · **Nguồn:** bộ slide Chương 3 (BFD, IFD, DFD, ERD, biểu đồ lớp, CSDL).
+**Cập nhật:** 07/11/2026 · **Nguồn:** bộ slide Chương 3 (BFD, IFD, DFD, ERD, biểu đồ lớp, CSDL) và SRS đã sửa.
 
 Chương 3 là kết quả phân tích thiết kế: nó quy định hệ thống **phải** như thế nào. Mã nguồn hiện tại
-được viết trước bản thiết kế này nên có chỗ lệch. Tài liệu này liệt kê từng chỗ lệch và việc cần làm
+được viết trước bản thiết kế này nên lệch nhiều chỗ. Tài liệu này liệt kê từng chỗ lệch và việc cần làm
 để đưa project về đúng thiết kế. Khi thiết kế và mã nguồn khác nhau, **thiết kế là chuẩn**.
 
-**Mức thiết kế: client–server.** Chương 3 chỉ mô tả hai tầng: client (trình duyệt của sinh viên,
-giáo vụ, quản trị viên) gửi request và server trả response; CSDL và mọi xử lý nằm ở server. Phần
-xử lý bên trong server (worker nạp tài liệu, đoạn văn và vector, hàng đợi `ingest_jobs`, pgvector)
-không xuất hiện trong thiết kế. Vì vậy CSDL trong thiết kế có **7 bảng** ứng với 7 thực thể ERD;
-3 bảng `chunks`, `chunk_embeddings`, `ingest_jobs` vẫn giữ trong mã nguồn (tổng **10 bảng** ở các
-mục dưới) và **không** tính là chỗ lệch cần sửa.
+**Mức thiết kế: client–server.** Thiết kế chỉ mô tả hai tầng: client (trình duyệt của sinh viên, giáo
+vụ, quản trị viên) gửi request, server trả response; CSDL và mọi xử lý nằm ở server.
 
 ---
 
-## 1. Vai trò lưu trên người dùng, bỏ bảng nối `department_members`
+## 0. Tóm tắt thiết kế mới
 
-### Thiết kế (ERD, biểu đồ lớp, CSDL)
-
-- Mỗi người dùng **thuộc đúng một đơn vị** (Đơn vị 1 — N Người dùng).
-- Mỗi người dùng có **đúng một vai trò**: `USER | CONTENT_ADMIN | SYSTEM_ADMIN`, lưu ngay trên `users`.
-- Phân quyền (UC16) là **đổi vai trò của một tài khoản**: `User.assignRole()`.
-- Bỏ `department_members` (−1 bảng); cộng thêm bảng cấu hình AI ở mục 2 (+1 bảng), CSDL còn **10 bảng** sau khi bỏ thêm 5 bảng đánh giá ở mục 5, 5 enum (`member_role` giữ nguyên giá trị, có thể đổi tên thành `role`).
-
-### Hiện trạng
-
-- Quan hệ User — Department là **M:N** qua bảng `department_members (user_id, department_id, role)`.
-- Vai hiệu dụng được suy ra bằng `effectiveRole()` từ danh sách tư cách (`server/src/lib/roles.ts`).
-- Phân quyền qua `POST /api/departments/:id/members` và `DELETE /api/departments/:id/members/:userId`.
-
-### Việc cần làm
-
-**CSDL — `server/prisma/`**
-
-1. `schema.prisma`, model `User`: thêm
-   - `role MemberRole @default(USER)`
-   - `departmentId String @map("department_id") @db.Uuid` + quan hệ tới `Department` (`onDelete: Restrict`).
-2. Xóa model `DepartmentMember`; bỏ `memberships` ở `User` và `members` ở `Department`, thêm `users User[]` ở `Department`.
-3. Migration mới, theo thứ tự:
-   1. Thêm cột `role`, `department_id` (cho phép NULL tạm thời).
-   2. Chuyển dữ liệu: mỗi user lấy vai cao nhất trong các tư cách thuộc khoa CNTT (đúng quy tắc của `effectiveRole`), `department_id` = id khoa CNTT.
-   3. User **không có** tư cách CNTT: quyết định trước khi chạy — khóa (`is_active = false`) hay xóa. Ghi rõ vào migration.
-   4. Đặt `department_id` NOT NULL, tạo chỉ mục `users(department_id)`.
-   5. Xóa bảng `department_members`.
-   - Sao lưu DB trước khi chạy trên dữ liệu thật; **không** dùng seed để nâng cấp.
-4. `prisma/check.ts`: bỏ `department_members` khỏi danh sách bảng, thêm kiểm tra cột `users.role`, `users.department_id`.
-5. `prisma/seed.ts`, `scripts/bootstrap-admin.ts`: tạo user với `role`, `departmentId` thay vì `departmentMember.upsert`.
-
-**Backend — `server/src/`**
-
-| Tệp | Thay đổi |
-|---|---|
-| `middleware/auth.middleware.ts` | Đọc `user.role`, `user.department` thay vì `memberships`. BR01: chặn khi `isActive = false` hoặc đơn vị không phải CNTT. BR02 giữ nguyên: mỗi request đọc lại `role` từ CSDL. |
-| `lib/roles.ts` | Bỏ `effectiveRole()`; các hàm `canManageContent`, `assertContentAdmin`, `assertSystemAdmin` giữ nguyên. |
-| `types/express.d.ts` | `AuthenticatedUser`: một `role`, một `department`; bỏ danh sách `departments`. |
-| `modules/auth/auth.service.ts`, `auth.controller.ts` | Bỏ `MembershipDto`, `toMembershipDtos`. `login` và `GET /auth/me` trả `{ token?, user }`, trong `user` có `role` và `department`. |
-| `modules/admin/admin.service.ts`, `admin.schema.ts`, `admin.route.ts` | Thay `ganThanhVien` / `goThanhVien` bằng `assignRole(userId, role)`. API mới: `PATCH /api/users/:id` nhận `{ role?, isActive? }`. Bỏ `POST/DELETE /api/departments/:id/members`. Giữ BR04: không tự khóa, không tự hạ vai. |
-| `eval/run-eval.ts` | Bỏ cùng bộ đánh giá (mục 5); nếu giữ làm công cụ nội bộ thì tạo người dùng giả lập với `role`. |
-| Test (`*.test.ts`) | Cập nhật fixture tạo user; thêm test: đổi vai có hiệu lực ở request kế tiếp, chặn tự hạ vai. |
-
-**Frontend — `web/src/features/`**
-
-| Tệp | Thay đổi |
-|---|---|
-| `auth/useAuth.ts` | Phiên chỉ còn `{ user }`; bỏ kiểu `Membership`, hàm `useMemberships()`. |
-| `admin/api.ts` | Bỏ `UserMembership`; `doiVai()` gọi `PATCH /api/users/:id` với `{ role }`. |
-| `admin/UserTable.tsx` | Hiển thị và đổi một vai cho mỗi tài khoản. |
-| `documents/DocumentManager.tsx` | Lấy quyền từ `user.role` thay vì `useMemberships()`. |
-
-**Tài liệu — `docs/`**
-
-- `erd.md`: quan hệ users — departments 1:N, bỏ `department_members`, thêm `ai_configs` (mục 2), bỏ 5 bảng đánh giá (mục 5), tổng 10 bảng.
-- `api-contract.md`: sửa mục đăng nhập / `me` (bỏ `memberships`), mục quản trị (thêm `PATCH /users/:id`, bỏ `/departments/:id/members`).
-- `phan-quyen.md`, `use-cases/README.md` (UC16): phân quyền = đổi vai của tài khoản.
-
----
-
-## 2. Dịch vụ AI do quản trị viên cấu hình (UC21)
-
-### Thiết kế (BFD, IFD, DFD, ERD, biểu đồ lớp, CSDL)
-
-- Hệ thống chỉ có **3 tác nhân**: Sinh viên CNTT, Giáo vụ khoa, Quản trị viên. Gemini API **không** còn là tác nhân ngoài; nó là thành phần bên trong hệ thống.
-- Quản trị viên cấu hình dịch vụ AI qua chức năng mới **UC21 Cấu hình dịch vụ AI** (module M4 Quản trị).
-- ERD có thêm tập thực thể **Cấu hình AI** (Người dùng 1 — n Cấu hình AI, tham gia toàn phần); biểu đồ lớp có thêm lớp `AIConfiguration` (`model`, `apiKey`, `update()`) và phương thức `User.configureAI()`.
-
-### Hiện trạng
-
-- Khóa và model đọc từ biến môi trường: `GEMINI_API_KEY`, `GEMINI_EMBEDDING_MODEL`, `GEMINI_GENERATION_MODEL`, `GEMINI_USE_TASK_TYPE` (`.env.example`, `server/src/config/env.ts`). Đổi cấu hình phải sửa `.env` và khởi động lại dịch vụ.
-
-### Việc cần làm
-
-1. **CSDL:** bảng mới `ai_configs` — `id`, `provider`, `embedding_model`, `generation_model`, `api_key_encrypted`, `use_task_type`, `is_active`, `updated_by` (FK `users`), `updated_at`. Chỉ một dòng `is_active = true` tại một thời điểm.
-   - Khóa API **mã hóa** trước khi lưu (khóa mã hóa lấy từ biến môi trường, không lưu trong DB); API không bao giờ trả lại khóa đầy đủ, chỉ trả 4 ký tự cuối.
-   - Lần chạy đầu: migration/seed tạo một dòng từ các biến `GEMINI_*` hiện có để không gián đoạn.
-2. **Backend:** `GET /api/admin/ai-config`, `PUT /api/admin/ai-config` (chỉ `SYSTEM_ADMIN`). `rag/embed.ts`, `rag/generate.ts` và worker đọc cấu hình đang hoạt động từ DB (có cache, làm mới khi cập nhật) thay vì `env`.
-   - Lưu ý: đổi **model embedding** làm vector cũ không dùng chung được. Thiết kế đã tách `chunk_embeddings` theo cột `model`; khi đổi model phải chạy lại nhúng vector cho tài liệu.
-3. **Frontend:** trang `/admin/ai` cho quản trị viên: chọn model, nhập khóa mới, xem trạng thái kết nối.
-4. **Tài liệu:** `use-cases/README.md` thêm UC21; `api-contract.md` thêm hai API trên; `.env.example` ghi rõ `GEMINI_*` chỉ dùng cho lần khởi tạo đầu.
-
----
-
-## 3. Tên phương thức theo biểu đồ lớp
-
-Biểu đồ lớp đặt tên phương thức thống nhất bằng tiếng Anh, theo cú pháp UML
-`+tên(in tham số: kiểu): kiểu trả về`. Mã hiện tại trộn tên tiếng Việt và tiếng Anh.
-Đổi tên để code đọc khớp thiết kế (không đổi hành vi):
-
-| Lớp | Thiết kế | Hiện tại |
+| | Hiện tại (mã nguồn) | Thiết kế Chương 3 |
 |---|---|---|
-| Department | `getDocuments(): Document[]`, `getMembers(): User[]` | truy vấn trong `admin.service`, `documents.service` |
-| User | `login(in pwd: string): boolean` | `auth.service.login` |
-| User | `assignRole(in role: Role): void` | `admin.service.ganThanhVien` + `goThanhVien` (gộp, xem mục 1) |
-| AIConfiguration | `update(in model: string): void`, `getModel(): string` | chưa có (xem mục 2) |
-| Conversation | `ask(in question: string): Message` | `chat.service.hoi` |
-| Conversation | `getMessages(): Message[]` | `chat.service.chiTietHoiThoai` |
-| Message | `getContent(): string` | đọc trực tiếp cột `content` |
-| Message | `getCitations(): MessageCitation[]` | đọc kèm trong `chat.service.chiTietHoiThoai` |
-| MessageCitation | `getSource(): Document` | `documents.service.get` (kèm trang, câu trích lưu trên trích dẫn) |
-| Document | `upload(in file: File): void` | `documents.service.create` |
-| Document | `retry(): void` | `documents.service.retry` |
+| Hỏi đáp | Sinh viên gõ câu hỏi tự do; RAG (pgvector + Gemini) sinh câu trả lời, trả qua SSE | Sinh viên **chọn nút** chủ đề → nút câu hỏi; server trả **câu trả lời soạn sẵn** kèm tài liệu nguồn và trang, qua REST/JSON |
+| AI | Gemini nhúng vector và sinh câu trả lời | **Không dùng AI** |
+| Nội dung trả lời | Sinh từ tài liệu đã nhúng | Giáo vụ soạn ở **UC22 Quản lý chủ đề**, **UC23 Quản lý câu hỏi – trả lời** |
+| Tài liệu | Tải lên → worker cắt đoạn, nhúng vector, trạng thái PENDING/READY/FAILED | Chỉ lưu tệp làm **nguồn trích dẫn**; không xử lý, không trạng thái |
+| Đơn vị, vai trò | Bảng `departments` + `department_members` (M:N, vai theo đơn vị) | Thuộc tính `department` và `role` **trên `users`** |
+| CSDL | 18 bảng (kể cả chunks, embeddings, jobs, citations, eval) | **6 bảng**: `users`, `topics`, `questions`, `documents`, `conversations`, `messages` |
 
-Các thao tác còn lại (đổi mật khẩu, sửa/gỡ tài liệu, truy hồi) giữ tên hiện tại; biểu đồ lớp chỉ ghi phương thức tiêu biểu. Đoạn văn và vector (`chunks`, `chunk_embeddings`) cùng hàng đợi xử lý nền (`ingest_jobs`, `worker/ingest.worker.ts`) là thành phần kỹ thuật, không có trong ERD và biểu đồ lớp; giữ nguyên trong mã nguồn và CSDL.
-
-Mục này ưu tiên thấp hơn mục 1 và 2: chỉ đổi tên, có thể làm sau cùng.
+Use case giữ nguyên: UC01–UC08, UC10–UC12, UC14–UC16, UC20.
+**Bỏ:** UC09 Theo dõi xử lý, UC13 Chạy lại khi lỗi, UC18 Tra cứu qua API, UC19 Đánh giá truy hồi,
+UC21 Cấu hình dịch vụ AI. **Thêm:** UC22 Quản lý chủ đề, UC23 Quản lý câu hỏi – trả lời (Giáo vụ).
 
 ---
 
-## 4. Bốn module theo BFD
+## 1. CSDL — `server/prisma/`
 
-BFD chia hệ thống thành 4 module. Cấu trúc thư mục `server/src/modules/` nên khớp với cách chia này:
+### Lược đồ đích (6 bảng, khớp ERD)
 
-| Module (BFD) | Use case | Thư mục hiện tại | Việc cần làm |
-|---|---|---|---|
-| M1 · Tài khoản | UC01–UC04 | `modules/auth` | Giữ nguyên |
-| M2 · Hỏi đáp | UC05, UC06, UC08 | `modules/chat` | Giữ nguyên; truy hồi tài liệu (`modules/retrieval`) là phần xử lý bên trong của M2, không có API riêng |
-| M3 · Tài liệu | UC07, UC09–UC13 | `modules/documents`, `worker/` | Giữ nguyên; worker là phần xử lý nền của M3 |
-| M4 · Quản trị | UC14–UC16, UC20, UC21 | `modules/admin`, route `/health` | Áp dụng mục 1 (phân quyền = đổi `users.role`) và mục 2 (cấu hình AI) |
+| Bảng | Cột chính | Ràng buộc |
+|---|---|---|
+| `users` | `id`, `email`, `password_hash`, `full_name`, `role` (`USER`/`CONTENT_ADMIN`/`SYSTEM_ADMIN`), `department` (text, ví dụ `CNTT`), `is_active` | `email` duy nhất |
+| `topics` | `id`, `name`, `sort_order` | — |
+| `questions` | `id`, `topic_id`, `content` (chữ trên nút), `answer` (câu trả lời soạn sẵn), `document_id`, `page`, `is_active` | `topic_id` → `topics` **RESTRICT**; `document_id` → `documents` **RESTRICT**, cho phép NULL |
+| `documents` | `id`, `title`, `file_path`, `file_hash`, `mime_type`, `page_count`, `uploaded_by` | `file_hash` duy nhất; `uploaded_by` → `users` |
+| `conversations` | `id`, `user_id`, `title`, `created_at` | `user_id` → `users` CASCADE |
+| `messages` | `id`, `conversation_id`, `question_id`, `sent_at` | `conversation_id` → `conversations` **CASCADE**; `question_id` → `questions` RESTRICT |
 
-So với phần SRS (4 phân hệ PH1–PH4), phân hệ PH1 được tách thành M1 Tài khoản và M4 Quản trị; phân hệ PH4 Vận hành kỹ thuật bị bỏ, UC20 chuyển vào M4 (xem mục 5).
-
----
-
-## 5. Bỏ UC18 (tra cứu lai qua API) và UC19 (đánh giá truy hồi)
-
-### Thiết kế
-
-- BFD không còn UC18, UC19 và module Vận hành. CSDL còn **10 bảng**: bỏ 5 bảng của bộ đánh giá truy hồi.
-- Truy hồi tài liệu vẫn chạy bên trong hỏi đáp (UC05), chỉ không mở ra thành API riêng.
+- **Gỡ câu hỏi = đặt `is_active = false`**, không xóa dòng, để lịch sử hội thoại vẫn hiển thị được
+  (luồng UC05, ngoại lệ "câu hỏi đã bị gỡ").
+- `page` phải ≤ `documents.page_count` (kiểm tra ở service, luồng UC23 bước 6).
+- Giáo vụ không gỡ được tài liệu còn câu hỏi dẫn tới (UC12), không xóa được chủ đề còn câu hỏi (UC22):
+  do khóa ngoại RESTRICT, service bắt lỗi và trả 409.
 
 ### Việc cần làm
 
-1. **UC18:** bỏ `routes.use(retrievalRouter)` trong `server/src/routes.ts` (endpoint `POST /api/search`), bỏ `retrieval.controller.ts`, `retrieval.route.ts`, `retrieval.schema.ts`. **Giữ** `retrieval.service.ts`, `retrieval.sql.ts` vì `chat.service.ts` và `rag/prompt.ts` dùng chúng. Xóa mục `/search` trong `docs/api-contract.md`.
-2. **UC19:** bỏ thư mục `server/src/eval/` và script `"eval"` trong `server/package.json`; bỏ 5 model `EvalSet`, `EvalQuestion`, `EvalGoldChunk`, `EvalRun`, `EvalResult` trong `schema.prisma` bằng một migration xóa bảng; bỏ tên các bảng này khỏi `prisma/check.ts`.
-   - Nếu nhóm vẫn muốn đo chất lượng truy hồi khi phát triển, có thể giữ bộ đánh giá như công cụ nội bộ ngoài thiết kế; khi đó ghi rõ trong `docs/` rằng nó không thuộc hệ thống bàn giao.
-3. **Tài liệu:** `use-cases/README.md` đánh dấu UC18, UC19 là đã bỏ; `erd.md` tổng số bảng 10.
+1. `schema.prisma`:
+   - Xóa model `Department`, `DepartmentMember`, `Chunk`, `ChunkEmbedding`, `IngestJob`,
+     `MessageCitation`, `EvalSet`, `EvalQuestion`, `EvalGoldChunk`, `EvalRun`, `EvalResult`.
+   - Xóa enum `DeptType`, `DocStatus`, `JobStatus`, `MessageRole`; đổi `MemberRole` thành `Role`.
+   - `User`: thêm `role Role @default(USER)`, `department String`.
+   - `Document`: bỏ `status`, `departmentId`, các quan hệ tới chunk/job; thêm `pageCount`.
+   - Thêm model `Topic`, `Question`; `Message` bỏ `role`, `content`, thêm `questionId`.
+2. Migration mới (sao lưu DB trước; chạy trên DB thử nghiệm riêng):
+   1. Thêm `users.role`, `users.department`; chép vai cao nhất trong khoa CNTT từ `department_members`
+      sang `users.role`, `department = 'CNTT'`. User không có tư cách CNTT: khóa (`is_active = false`).
+   2. Tạo `topics`, `questions`.
+   3. Xóa dữ liệu hỏi đáp cũ (`message_citations`, `messages`, `conversations`): tin nhắn sinh từ RAG
+      không ánh xạ được sang câu hỏi có sẵn. Ghi rõ điều này trong migration.
+   4. Xóa các bảng ở bước 1 và extension `vector`.
+3. `prisma/check.ts`: danh sách bảng còn 6; kiểm tra cột `users.role`, `users.department`.
+4. `prisma/seed.ts`, `scripts/bootstrap-admin.ts`: tạo user với `role`, `department`; seed vài chủ
+   đề và câu hỏi mẫu (đăng ký học phần, đồ án, chuẩn đầu ra, bảo lưu, cảnh báo học vụ, tốt nghiệp).
+5. `docker-compose.yml`: đổi image `pgvector/pgvector:pg16` thành `postgres:16`.
 
 ---
 
-## 6. Thứ tự đề xuất
+## 2. Bỏ AI / RAG — `server/`
 
-1. Mục 1, 2 và 5 — CSDL: schema + migration + check (bỏ `department_members`, thêm `ai_configs`, bỏ 5 bảng đánh giá), chạy trên DB thử nghiệm riêng.
-2. Mục 1, 2 và 5 — backend, rồi frontend; chạy toàn bộ test.
-3. Cập nhật tài liệu trong `docs/`.
-4. Mục 3 — đổi tên phương thức.
-5. Kiểm thử lại trên DB thử nghiệm theo ba vai (đăng nhập, hỏi đáp, tải tài liệu, khóa tài khoản, đổi cấu hình AI) trước khi áp dụng cho DB thật.
+| Xóa | Ghi chú |
+|---|---|
+| `src/rag/` (`chunk.ts`, `embed.ts`, `generate.ts`, `prompt.ts`, `citation-guard.ts` và test) | Không còn sinh câu trả lời |
+| `src/worker/ingest.worker.ts` và dịch vụ worker trong `docker-compose.yml` | Tài liệu không còn xử lý nền |
+| `src/modules/retrieval/` | Bỏ cả `POST /api/search` (UC18) |
+| `src/eval/` và script `"eval"` trong `server/package.json` | UC19 |
+| `GEMINI_*` trong `src/config/env.ts`, `.env.example` | Không còn khóa AI |
+| `documents.parser.ts` | Chỉ giữ phần đếm số trang (để kiểm tra `page`) |
+
+Gỡ các thư viện chỉ dùng cho phần trên (SDK Gemini, thư viện trích văn bản) khỏi `server/package.json`.
+
+---
+
+## 3. API — `server/src/modules/`
+
+| Module (BFD) | Use case | API đích | So với hiện tại |
+|---|---|---|---|
+| M1 · Tài khoản (`auth`) | UC01–UC04 | `POST /auth/login`, `GET /auth/me`, `PUT /auth/password` | `login`, `me` trả `user.role`, `user.department`; bỏ `memberships` |
+| M2 · Hỏi đáp (`chat`) | UC05, UC06, UC08 | `GET /topics`, `GET /topics/:id/questions`, `POST /chat` `{ questionId, conversationId? }` → `{ conversationId, question, answer, source: { documentId, title, page } }`, `GET /conversations`, `GET /conversations/:id` | `POST /chat` nhận `questionId` thay vì câu hỏi tự do; trả JSON, **bỏ SSE** |
+| M3 · Nội dung (`documents`, `content`) | UC07, UC10–UC12, UC22, UC23 | `GET/POST/PATCH/DELETE /documents`, `GET /documents/:id/file`; `POST/PATCH/DELETE /topics`, `POST/PATCH/DELETE /questions` (CONTENT_ADMIN) | Bỏ `/documents/:id/chunks`, `/status`, `/retry`; thêm module quản lý chủ đề và câu hỏi |
+| M4 · Quản trị (`admin`, health) | UC14–UC16, UC20 | `GET /users`, `PATCH /users/:id` `{ role?, isActive? }`, `GET /health` | Bỏ `/departments*`, `/departments/:id/members`; `/health` trả trạng thái server, CSDL, uptime |
+
+Middleware và phân quyền:
+
+- `middleware/auth.middleware.ts`: đọc `user.role`, `user.department`. BR01: chặn khi `isActive = false`
+  hoặc `department` khác `CNTT`. BR02: mỗi request đọc lại `role` từ CSDL.
+- `lib/roles.ts`: bỏ `effectiveRole()`; giữ `assertContentAdmin`, `assertSystemAdmin`.
+- `types/express.d.ts`: `AuthenticatedUser` có một `role`, một `department`.
+- `admin.service.ts`: thay `ganThanhVien` / `goThanhVien` bằng `assignRole(userId, role)`; giữ BR04
+  (không tự khóa, không tự hạ vai).
+
+---
+
+## 4. Frontend — `web/src/features/`
+
+| Tệp | Thay đổi |
+|---|---|
+| `chat/ChatBox.tsx`, `MessageList.tsx`, `MessageBubble.tsx` | Thay ô nhập bằng **nút chủ đề → nút câu hỏi**; mỗi lượt hiển thị câu hỏi đã chọn, câu trả lời và nguồn |
+| `chat/useSseStream.ts` | Xóa; gọi `POST /api/chat` dạng JSON |
+| `chat/CitationChip.tsx`, `CitationDrawer.tsx` | Hiển thị một nguồn (tên tài liệu + trang), mở tệp gốc tại trang đó (UC08) |
+| `documents/StatusBadge.tsx` | Xóa (không còn trạng thái xử lý) |
+| `documents/DocumentManager.tsx`, `DocumentTable.tsx`, `api.ts` | Bỏ cột trạng thái, nút chạy lại; quyền lấy từ `user.role` |
+| Mới: `content/` | Trang cho giáo vụ: quản lý chủ đề (UC22), soạn câu hỏi – câu trả lời, chọn tài liệu nguồn và trang (UC23) |
+| `auth/useAuth.ts` | Phiên chỉ còn `{ user }` có `role`, `department`; bỏ `Membership`, `useMemberships()` |
+| `admin/api.ts`, `admin/UserTable.tsx` | Mỗi tài khoản một vai; đổi vai qua `PATCH /api/users/:id` |
+
+---
+
+## 5. Tên lớp và phương thức theo biểu đồ lớp
+
+Đặt tên trong service/model khớp biểu đồ lớp (cú pháp `+tên(in tham số: kiểu): kiểu trả về`):
+
+| Lớp | Phương thức thiết kế | Vị trí đề xuất |
+|---|---|---|
+| User | `login(in pwd: string): boolean`, `assignRole(in role: Role): void` | `auth.service`, `admin.service` |
+| Conversation | `ask(in q: Question): Message`, `getMessages(): Message[]` | `chat.service` (thay `hoi`, `chiTietHoiThoai`) |
+| Message | `getQuestion(): Question` | `chat.service` |
+| Question | `getAnswer(): string`, `getSource(): Document` | `content.service` |
+| Topic | `getQuestions(): Question[]`, `addQuestion(in q: Question): void` | `content.service` |
+| Document | `upload(in file: File): void`, `remove(): void` | `documents.service` (thay `create`, `remove`) |
+
+---
+
+## 6. Tài liệu trong `docs/`
+
+- `erd.md`: vẽ lại theo 6 bảng ở mục 1.
+- `api-contract.md`: theo bảng API ở mục 3; xóa mục SSE, `/search`, `/documents/:id/chunks|status|retry`,
+  `/departments*`.
+- `use-cases/README.md`: đánh dấu UC09, UC13, UC18, UC19, UC21 đã bỏ; thêm UC22, UC23; UC05 thành
+  "Chọn câu hỏi, nhận trả lời".
+- `phan-quyen.md`: phân quyền = đổi `users.role`; Giáo vụ thêm quyền quản lý chủ đề, câu hỏi.
+- `README.md`: bỏ hướng dẫn cấu hình Gemini, pgvector.
+
+---
+
+## 7. Thứ tự đề xuất
+
+1. CSDL (mục 1) trên DB thử nghiệm riêng: schema, migration, check, seed chủ đề và câu hỏi mẫu.
+2. Xóa phần AI/RAG (mục 2) để backend biên dịch được với schema mới.
+3. API (mục 3), chạy `pnpm typecheck` và test; viết test cho: chọn câu hỏi trả đúng `answer` và nguồn,
+   gỡ tài liệu còn câu hỏi bị chặn, đổi vai có hiệu lực ở request kế tiếp.
+4. Frontend (mục 4).
+5. Tài liệu (mục 6) và đổi tên phương thức (mục 5).
+6. Kiểm thử theo ba vai: sinh viên chọn câu hỏi và mở nguồn; giáo vụ tải tài liệu, tạo chủ đề, soạn câu
+   hỏi; quản trị viên khóa tài khoản, đổi vai, xem `/health`.
