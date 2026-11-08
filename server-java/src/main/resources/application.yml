@@ -1,0 +1,37 @@
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+
+spring:
+  application:
+    name: tangthu-server
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/tangthu}
+    username: ${DB_USER:tangthu}
+    password: ${DB_PASSWORD:tangthu}
+  jpa:
+    hibernate:
+      ddl-auto: validate          # lược đồ do Flyway quản lý
+    open-in-view: false
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    # Bỏ classpath:db/demo khi triển khai thật (dữ liệu demo có mật khẩu chung).
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration,classpath:db/demo}
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 21MB
+  jackson:
+    default-property-inclusion: always
+    serialization:
+      write-dates-as-timestamps: false
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}         # ≥ 32 byte, bắt buộc
+    ttl: ${JWT_TTL:PT8H}
+  storage-dir: ${STORAGE_DIR:./storage}
+  department: ${APP_DEPARTMENT:CNTT}
+  cors-origins: ${CORS_ORIGINS:*}

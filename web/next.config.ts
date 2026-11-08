@@ -1,24 +1,22 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
-// `import.meta.url` là URL kiểu file://. Trên Windows, đọc `.pathname` của nó cho
-// ra "/D:/Source_code/..." — có dấu gạch thừa ở đầu và không dùng được. Phải qua
-// `fileURLToPath` mới ra đường dẫn hệ điều hành đúng trên cả Windows lẫn Linux.
-const thuMucHienTai = path.dirname(fileURLToPath(import.meta.url));
+/**
+ * Địa chỉ server Spring Boot mà Next chuyển tiếp `/api/*` tới.
+ *
+ * Trình duyệt chỉ gọi `/api/...` trên CHÍNH máy nó vừa tải trang, nên không vướng
+ * CORS và chạy được cho localhost, IP LAN hay tên miền mà không phải build lại.
+ * Giá trị được đọc LÚC BUILD (bản standalone đóng băng cấu hình), nên trong Docker
+ * truyền bằng build arg `API_INTERNAL_URL`.
+ */
+const apiInternalUrl = process.env.API_INTERNAL_URL ?? "http://localhost:8080";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-
-  // Gom mọi thứ cần để chạy vào .next/standalone, kể cả phần node_modules dùng
-  // tới. Nhờ vậy image production không phải cài lại phụ thuộc.
+  // Gom mọi thứ cần để chạy vào .next/standalone — ảnh Docker không phải cài lại phụ thuộc.
   output: "standalone",
-
-  // Trong monorepo, Next lấy thư mục dự án làm gốc dò file và bỏ qua mọi thứ nằm
-  // ngoài. Với pnpm thì phụ thuộc là symlink trỏ ra ../node_modules/.pnpm, tức là
-  // nằm ngoài `web/` — không chỉ rõ gốc là bản standalone thiếu file và chết lúc
-  // chạy. Trỏ lên gốc workspace.
-  outputFileTracingRoot: path.join(thuMucHienTai, ".."),
+  async rewrites() {
+    return [{ source: "/api/:path*", destination: `${apiInternalUrl}/api/:path*` }];
+  },
 };
 
 export default nextConfig;

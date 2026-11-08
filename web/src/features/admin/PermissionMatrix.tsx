@@ -6,7 +6,7 @@ export function PermissionMatrix() {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[520px] border-collapse">
           <caption className="sr-only">
-            Ma trận phân quyền theo vai. Chi tiết ở docs/phan-quyen.md mục 3.
+            Ma trận phân quyền theo vai. Chi tiết ở docs/SRS.md mục 7.
           </caption>
           <thead>
             <tr className="border-b border-border-strong text-[13px] leading-5 text-muted">
@@ -45,9 +45,9 @@ export function PermissionMatrix() {
       </div>
 
       <div className="mt-5 max-w-[64ch] space-y-2 text-sm leading-[22px] text-muted">
-        <p>Cả ba vai dùng chung kho tài liệu ngành CNTT và quy định chung của trường áp dụng cho sinh viên CNTT.</p>
-        <p>Giáo vụ khoa CNTT không được quản lý tài khoản hoặc cấp quyền. Chỉ quản trị viên được phân quyền.</p>
-        <p>Đánh giá truy hồi và bài thực hành TCP/HTTP chạy qua CLI của người vận hành, không phải chức năng web.</p>
+        <p>Vai trên có mọi quyền của vai dưới: Quản trị viên ⊃ Giáo vụ khoa ⊃ Sinh viên.</p>
+        <p>Server đọc lại vai từ CSDL ở mỗi request, nên khóa tài khoản hoặc đổi vai có hiệu lực ngay.</p>
+        <p>Quản trị viên không tự khóa hay tự hạ vai của chính mình.</p>
       </div>
     </div>
   );

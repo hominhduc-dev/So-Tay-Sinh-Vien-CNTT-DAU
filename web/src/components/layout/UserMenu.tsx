@@ -17,11 +17,11 @@ export function UserMenu({ compact = false }: UserMenuProps) {
   return (
     <div className="flex items-center gap-2.5">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-border text-xs font-semibold text-secondary">
-        {initialsOf(user.name)}
+        {initialsOf(user.fullName)}
       </div>
       {!compact && (
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-medium leading-[18px]">{user.name}</div>
+          <div className="truncate text-[13px] font-medium leading-[18px]">{user.fullName}</div>
           <div className="truncate text-[13px] leading-[18px] text-muted">{describeUser(user)}</div>
         </div>
       )}

@@ -1,34 +1,27 @@
 import type { Metadata } from "next";
-import { Be_Vietnam_Pro, JetBrains_Mono, Lora } from "next/font/google";
+import "@fontsource/be-vietnam-pro/300.css";
+import "@fontsource/be-vietnam-pro/400.css";
+import "@fontsource/be-vietnam-pro/500.css";
+import "@fontsource/be-vietnam-pro/600.css";
+import "@fontsource/lora/400.css";
+import "@fontsource/lora/500.css";
+import "@fontsource/lora/600.css";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
 import "./globals.css";
 
-const sans = Be_Vietnam_Pro({
-  variable: "--font-be-vietnam",
-  subsets: ["latin", "vietnamese"],
-  weight: ["300", "400", "500", "600"],
-});
-
-const serif = Lora({
-  variable: "--font-lora",
-  subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600"],
-});
-
-const mono = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin", "vietnamese"],
-  weight: ["400", "500"],
-});
+// Font đóng gói sẵn từ npm (@fontsource), không tải từ Google lúc build hay lúc chạy:
+// hệ thống phải chạy được trong LAN phòng máy không có Internet (NFR-07).
 
 export const metadata: Metadata = {
   title: { default: "Sổ Tay Sinh Viên CNTT", template: "%s · Sổ Tay Sinh Viên CNTT" },
-  description: "Hỏi đáp học vụ có trích dẫn cho sinh viên ngành CNTT, Đại học Kiến trúc Đà Nẵng.",
+  description: "Tra cứu quy định học vụ qua câu hỏi có sẵn, kèm nguồn, cho sinh viên ngành CNTT — Đại học Kiến trúc Đà Nẵng.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="vi">
-      <body className={`${sans.variable} ${serif.variable} ${mono.variable}`}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

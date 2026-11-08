@@ -1,200 +1,221 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Menu, Send } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, Menu } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Textarea } from "@/components/ui/textarea";
-import { useCurrentUser } from "@/features/auth/useAuth";
 import { ApiError } from "@/lib/api-client";
-import { streamChat, type ChatSource } from "@/lib/chat-stream";
-import { CitationDrawer } from "./CitationDrawer";
-import { MessageList } from "./MessageList";
-import type { ChatMessage } from "./MessageBubble";
+import { cn } from "@/lib/utils";
+import { AnswerCard } from "./AnswerCard";
+import {
+  chiTietHoiThoai,
+  hoi,
+  layCauHoi,
+  layChuDe,
+  layHoiThoai,
+  type ChatMessage,
+  type ConversationSummary,
+  type QuestionButton,
+  type Topic,
+} from "./api";
 
-// Ghi chú: bản trước tự ghép câu trả lời từ các đoạn `/search` trả về
-// (`buildSearchAnswer`). Nay `POST /chat` sinh câu trả lời thật kèm marker `[n]`
-// nên phần ghép tay đó đã bỏ — giữ lại là hai nguồn sự thật cho cùng một thứ.
-
+/**
+ * UC05 — chatbot dạng nút chọn: chủ đề → câu hỏi → câu trả lời soạn sẵn kèm nguồn.
+ * Không có ô nhập tự do: hệ thống chỉ trả lời các câu hỏi giáo vụ đã soạn (BR06).
+ */
 export function ChatBox() {
-  const currentUser = useCurrentUser();
-  // Mặc định theo đơn vị của người đăng nhập, không cứng hóa một khoa.
-  // `AuthGuard` bảo đảm đã có người dùng trước khi trang này được kết xuất.
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [topic, setTopic] = useState<Topic | null>(null);
+  const [buttons, setButtons] = useState<QuestionButton[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [activeCitation, setActiveCitation] = useState<number | null>(null);
-  const [lastQuestion, setLastQuestion] = useState("");
-  // `null` là hội thoại mới; máy chủ trả về id ở sự kiện `done` của lượt đầu.
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [dangTai, setDangTai] = useState(true);
+  const [dangHoi, setDangHoi] = useState(false);
+  const [loi, setLoi] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
-  const effectiveScope = currentUser?.scope ?? "Ngành CNTT · DAU";
 
-  const sources = useMemo(() => {
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const message = messages[index];
-      if (message.role === "answer") return message.sources;
+  const baoLoi = (e: unknown, macDinh: string) => setLoi(e instanceof ApiError ? e.message : macDinh);
+
+  const napHoiThoai = useCallback(async () => {
+    try {
+      setConversations((await layHoiThoai()).items);
+    } catch {
+      // Danh sách bên trái hụt một lần không đáng chặn cả màn chat.
     }
-    return [];
-  }, [messages]);
+  }, []);
 
   useEffect(() => {
-    const thread = threadRef.current;
-    if (thread) thread.scrollTo({ top: thread.scrollHeight, behavior: "smooth" });
-  }, [messages, loading]);
+    let huy = false;
+    Promise.all([layChuDe(), layHoiThoai()])
+      .then(([t, c]) => {
+        if (huy) return;
+        setTopics(t);
+        setConversations(c.items);
+      })
+      .catch((e) => !huy && baoLoi(e, "Không tải được danh sách chủ đề."))
+      .finally(() => !huy && setDangTai(false));
+    return () => {
+      huy = true;
+    };
+  }, []);
 
-  async function send(question = input) {
-    const text = question.trim();
-    if (!text || loading) return;
-    setLastQuestion(text);
-    setMessages((current) => [...current, { id: crypto.randomUUID(), role: "user", text }]);
-    setInput("");
-    setLoading(true);
-    setActiveCitation(null);
+  useEffect(() => {
+    const el = threadRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages, buttons]);
 
-    // Một khung trả lời rỗng, dựng TRƯỚC khi token đầu tiên về. Các mảnh chữ sẽ
-    // được nối dần vào đúng khung này.
-    const answerId = crypto.randomUUID();
-    let daCoToken = false;
-
+  async function chonChuDe(t: Topic) {
+    setLoi(null);
+    setTopic(t);
+    setButtons([]);
     try {
-      await streamChat(
-        { question: text, conversationId },
-        {
-          // `sources` luôn tới TRƯỚC token đầu tiên, nên panel nguồn dựng xong
-          // trước cả khi người dùng đọc được chữ nào — họ thấy hệ thống dựa vào
-          // tài liệu nào trước khi thấy nó nói gì.
-          onSources(items) {
-            setMessages((current) => [
-              ...current,
-              { id: answerId, role: "answer", text: "", sources: items as ChatSource[] },
-            ]);
-            if (items.length > 0) setPanelOpen(true);
-          },
-          onToken(chunk) {
-            daCoToken = true;
-            setMessages((current) =>
-              current.map((m) => (m.id === answerId ? { ...m, text: m.text + chunk } : m)),
-            );
-          },
-          onDone(info) {
-            // Giữ lại để lượt hỏi sau nối vào cùng một hội thoại.
-            setConversationId(info.conversationId);
-
-            // Thu panel nguồn về đúng những đoạn được trích.
-            //
-            // Trong lúc chữ đang chảy, panel cố ý hiện cả `topK` đoạn truy hồi
-            // được — người dùng thấy hệ thống đang dựa vào đâu trước khi đọc nó
-            // nói gì. Nhưng khi xong mà vẫn để nguyên thì câu trả lời trích [1]
-            // [2] còn panel treo mười thẻ, và tải lại hội thoại lại chỉ còn hai
-            // vì `message_citations` chỉ lưu bấy nhiêu. Ba con số cho cùng một
-            // câu trả lời.
-            //
-            // Thay phần chữ bằng bản chung cuộc.
-            //
-            // Các sự kiện `token` là bản THÔ của mô hình. Ràng buộc trích dẫn
-            // chỉ chạy được sau khi gom đủ, và nó sửa văn bản theo hai cách: gỡ
-            // marker mô hình bịa ra, hoặc thay cả câu trả lời bằng câu từ chối
-            // khi không có trích dẫn hợp lệ nào. Không thay ở đây thì màn hình
-            // giữ bản thô còn CSDL giữ bản đã sửa — người dùng đọc một câu trả
-            // lời tự tin trong khi lịch sử hội thoại ghi "không tìm thấy".
-            //
-            // Cả hai hiệu chỉnh gộp vào MỘT lần cập nhật: tách ra thành hai sẽ
-            // vẽ lại hai lần và người dùng thấy chữ nháy.
-            //
-            // `null` là máy chủ không gửi trường đó — giữ nguyên còn hơn xóa.
-            const { cited, text } = info;
-            if (cited === null && text === null) return;
-            setMessages((current) =>
-              current.map((m) =>
-                m.id === answerId && m.role === "answer"
-                  ? {
-                      ...m,
-                      text: text ?? m.text,
-                      sources: cited === null ? m.sources : m.sources.filter((s) => cited.includes(s.n)),
-                    }
-                  : m,
-              ),
-            );
-          },
-          onError(message) {
-            setMessages((current) => [
-              ...current.filter((m) => m.id !== answerId || daCoToken),
-              { id: crypto.randomUUID(), role: "error", text: message },
-            ]);
-          },
-        },
-      );
-    } catch (error) {
-      setMessages((current) => [
-        ...current.filter((m) => m.id !== answerId),
-        {
-          id: crypto.randomUUID(),
-          role: "error",
-          text: error instanceof ApiError ? error.message : "Không gửi được câu hỏi. Vui lòng thử lại.",
-        },
-      ]);
-    } finally {
-      setLoading(false);
+      setButtons(await layCauHoi(t.id));
+    } catch (e) {
+      baoLoi(e, "Không tải được câu hỏi của chủ đề.");
     }
   }
 
-  function selectCitation(number: number) {
-    setActiveCitation(number);
-    setPanelOpen(true);
-    window.setTimeout(() => setActiveCitation((current) => current === number ? null : current), 1500);
+  async function chonCauHoi(q: QuestionButton) {
+    if (dangHoi) return;
+    setDangHoi(true);
+    setLoi(null);
+    try {
+      const kq = await hoi(q.id, conversationId);
+      setMessages((cur) => [...cur, kq.message]);
+      if (!conversationId) {
+        setConversationId(kq.conversationId);
+      }
+      void napHoiThoai();
+    } catch (e) {
+      // Câu hỏi vừa bị giáo vụ ẩn: tải lại danh sách nút để không bấm lại vào nó.
+      if (e instanceof ApiError && e.code === "QUESTION_NOT_FOUND" && topic) {
+        setButtons(await layCauHoi(topic.id).catch(() => []));
+      }
+      baoLoi(e, "Không lấy được câu trả lời. Vui lòng thử lại.");
+    } finally {
+      setDangHoi(false);
+    }
   }
 
-  function newChat() {
-    setMessages([]);
+  async function moHoiThoai(id: string) {
+    setSidebarOpen(false);
+    setLoi(null);
+    try {
+      const ct = await chiTietHoiThoai(id);
+      setConversationId(ct.id);
+      setMessages(ct.messages);
+      setTopic(null);
+      setButtons([]);
+    } catch (e) {
+      baoLoi(e, "Không mở được hội thoại.");
+    }
+  }
+
+  function hoiThoaiMoi() {
     setConversationId(null);
-    setPanelOpen(false);
-    setActiveCitation(null);
+    setMessages([]);
+    setTopic(null);
+    setButtons([]);
+    setLoi(null);
     setSidebarOpen(false);
   }
 
   return (
     <main className="flex h-dvh overflow-hidden bg-base">
-      <Sidebar open={sidebarOpen} scope={effectiveScope} onNewChat={newChat} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        open={sidebarOpen}
+        conversations={conversations}
+        activeId={conversationId}
+        onSelect={(id) => void moHoiThoai(id)}
+        onNewChat={hoiThoaiMoi}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       <section className="relative flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-2.5 border-b border-border bg-surface px-4 py-2.5 md:hidden">
           <button type="button" onClick={() => setSidebarOpen(true)} className="flex size-11 items-center justify-center rounded-[8px] border border-border" aria-label="Mở menu"><Menu className="size-5" /></button>
-          <span className="rounded-[4px] bg-indigo-soft px-2 py-1 text-[13px] font-medium leading-5 text-indigo">{effectiveScope}</span>
+          <span className="font-serif text-[15px] font-semibold">Hỏi đáp học vụ</span>
         </div>
 
         <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-[720px] px-6 pb-8 pt-10">
-            <MessageList messages={messages} loading={loading} activeCitation={activeCitation} onCitation={selectCitation} onSample={send} onRetry={() => send(lastQuestion)} />
+            {messages.length === 0 && (
+              <div className="pb-10 pt-6">
+                <h1 className="max-w-[15em] font-serif text-[30px] font-semibold leading-10">Tra cứu quy định học vụ</h1>
+                <p className="mt-3.5 max-w-[34em] text-[15px] leading-[26px] text-secondary">
+                  Chọn một chủ đề, rồi chọn câu hỏi. Câu trả lời do giáo vụ khoa soạn và luôn kèm đúng trang trong văn bản gốc.
+                </p>
+              </div>
+            )}
+            {messages.map((m) => <AnswerCard key={m.id} message={m} />)}
+            {dangHoi && <div role="status" className="pb-6 text-[13px] font-medium leading-5 text-muted">Đang lấy câu trả lời…</div>}
           </div>
         </div>
 
         <div className="border-t border-border bg-base">
-          <div className="mx-auto max-w-[720px] px-4 pb-[22px] pt-4 sm:px-6">
-            <div className="relative rounded-[12px] border border-border bg-surface py-3.5 pl-4 pr-14 focus-within:border-border-strong focus-within:ring-2 focus-within:ring-accent/10">
-              <Textarea
-                rows={1}
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    void send();
-                  }
-                }}
-                placeholder="Hỏi về quy chế, thủ tục, đề cương môn học…"
-                className="max-h-[130px]"
-                aria-label="Câu hỏi"
-              />
-              <button type="button" onClick={() => void send()} disabled={loading || !input.trim()} className="absolute bottom-2.5 right-2.5 flex size-[34px] items-center justify-center rounded-[8px] bg-accent text-white hover:bg-accent-hover disabled:opacity-40" aria-label="Gửi câu hỏi"><Send className="size-4" /></button>
-            </div>
-            <p className="mt-2 text-[13px] leading-5 text-muted">Câu trả lời chỉ dựa trên tài liệu trong phạm vi {effectiveScope} và quy định chung áp dụng cho sinh viên CNTT.</p>
+          <div className="mx-auto max-h-[45dvh] max-w-[720px] overflow-y-auto px-4 pb-[22px] pt-4 sm:px-6">
+            {loi && <p role="alert" className="mb-3 text-sm leading-[22px] text-danger">{loi}</p>}
+
+            {dangTai ? (
+              <p className="text-sm text-muted">Đang tải chủ đề…</p>
+            ) : topic === null ? (
+              <>
+                <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Chọn chủ đề</div>
+                {topics.length === 0 ? (
+                  <p className="text-sm text-muted">Chưa có chủ đề nào.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {topics.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => void chonChuDe(t)}
+                        className="min-h-11 rounded-[8px] border border-border-strong bg-surface px-4 py-2 text-left text-[15px] leading-6 hover:border-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        {t.name}
+                        <span className="ml-2 font-mono text-[12px] text-muted">{t.questionCount}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="mb-2.5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setTopic(null); setButtons([]); }}
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-[8px] px-2 text-sm text-indigo hover:bg-sunken"
+                  >
+                    <ArrowLeft className="size-4" /> Chọn chủ đề khác
+                  </button>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">{topic.name}</span>
+                </div>
+                {buttons.length === 0 ? (
+                  <p className="text-sm text-muted">Chủ đề này chưa có câu hỏi.</p>
+                ) : (
+                  <div className="flex flex-col items-stretch gap-2">
+                    {buttons.map((q) => (
+                      <button
+                        key={q.id}
+                        type="button"
+                        disabled={dangHoi}
+                        onClick={() => void chonCauHoi(q)}
+                        className={cn(
+                          "min-h-11 rounded-[8px] border border-border-strong bg-surface px-4 py-2.5 text-left text-[15px] leading-6 hover:border-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50",
+                        )}
+                      >
+                        {q.content}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </section>
-
-      <CitationDrawer sources={sources} activeCitation={activeCitation} open={panelOpen} onClose={() => setPanelOpen(false)} />
     </main>
   );
 }

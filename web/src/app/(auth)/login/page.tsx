@@ -24,13 +24,13 @@ export default function LoginPage() {
           </div>
           <h1 className="mt-3 font-serif text-[32px] font-semibold leading-[38px] sm:text-[36px] sm:leading-[44px]">Sổ Tay Sinh Viên CNTT</h1>
           <p className="mt-1.5 text-[15px] leading-6 text-secondary">
-            Hỏi đáp học vụ dành cho sinh viên ngành Công nghệ Thông tin. Đăng nhập bằng tài khoản được quản trị cấp.
+            Tra cứu quy định học vụ cho sinh viên ngành Công nghệ Thông tin. Đăng nhập bằng tài khoản được quản trị cấp.
           </p>
 
           <LoginForm />
 
           <p className="mt-4 border-t border-border pt-3 text-[13px] leading-5 text-muted [@media(max-height:660px)]:hidden">
-            Tra cứu tài liệu ngành CNTT và quy định chung của Trường Đại học Kiến trúc Đà Nẵng.
+            Chọn chủ đề, chọn câu hỏi — câu trả lời do giáo vụ khoa soạn, kèm trang trong văn bản gốc.
           </p>
         </section>
       </main>

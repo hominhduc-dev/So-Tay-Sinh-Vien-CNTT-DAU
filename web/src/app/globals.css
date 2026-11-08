@@ -17,9 +17,9 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
-  --font-sans: var(--font-be-vietnam), "Be Vietnam Pro", Inter, system-ui, sans-serif;
-  --font-serif: var(--font-lora), Lora, "Source Serif 4", Georgia, serif;
-  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Be Vietnam Pro", Inter, system-ui, sans-serif;
+  --font-serif: Lora, "Source Serif 4", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 :root {
@@ -47,7 +47,7 @@ body {
   margin: 0;
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: var(--font-be-vietnam), "Be Vietnam Pro", Inter, system-ui, sans-serif;
+  font-family: "Be Vietnam Pro", Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

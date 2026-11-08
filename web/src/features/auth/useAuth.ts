@@ -6,10 +6,10 @@
 // KHÔNG có bảng người dùng ở đây, và đừng thêm lại. Bản trước giữ một mảng
 // `demoUsers` phản chiếu dữ liệu seed để đăng nhập được khi chưa có máy chủ.
 // Đó là một đường vào KHÔNG QUA MÁY CHỦ: ai sửa được JavaScript trong trình
-// duyệt là chọn được vai và phạm vi cho chính mình — đúng thứ mà cả đồ án này
+// duyệt là chọn được vai cho chính mình — đúng thứ mà cả đồ án này
 // phủ định.
 //
-// Vai và phạm vi CHỈ đến từ máy chủ, qua phản hồi của `/auth/login` và
+// Vai CHỈ đến từ máy chủ, qua phản hồi của `/auth/login` và
 // `/auth/me`. Dữ liệu lưu ở localStorage chỉ để khỏi nháy màn hình khi tải lại
 // trang; nó không được tin, và `/auth/me` là thứ quyết định.
 // ---------------------------------------------------------------------------
@@ -18,28 +18,20 @@ import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, apiClient, apiPost, TOKEN_KEY } from "@/lib/api-client";
 
-/** Đúng khuôn `user` mà máy chủ trả về — phụ lục A. */
+export type RoleCode = "USER" | "CONTENT_ADMIN" | "SYSTEM_ADMIN";
+
+/** Đúng khuôn `user` server trả về ở `/auth/login` và `/auth/me`. */
 export type AuthUser = {
   id: string;
-  code: string | null;
-  name: string;
-  email: string;
-  /** Nhãn hiển thị: "Sinh Viên CNTT", "Giáo vụ khoa CNTT", "Quản Trị Viên". */
-  role: string;
-  /** Mã vai, dùng cho logic. Có ba giá trị. */
-  roleCode: "USER" | "CONTENT_ADMIN" | "SYSTEM_ADMIN";
-  /** Cùng phạm vi CNTT cho cả ba vai. */
-  scope: string;
-};
-
-export type Membership = {
-  departmentId: string;
   code: string;
-  name: string;
-  roleCode: "USER" | "CONTENT_ADMIN" | "SYSTEM_ADMIN";
+  email: string;
+  fullName: string;
+  role: RoleCode;
+  department: string;
+  active: boolean;
 };
 
-type Session = { user: AuthUser; memberships: Membership[] };
+type Session = { user: AuthUser };
 type LoginResponse = Session & { token: string };
 
 const PROFILE_KEY = "tang-thu-profile";
@@ -165,11 +157,6 @@ export function useCurrentUser(): AuthUser | null {
   return useSession()?.user ?? null;
 }
 
-/** Các đơn vị người dùng thuộc về. Quyết định phạm vi tra cứu. */
-export function useMemberships(): Membership[] {
-  return useSession()?.memberships ?? [];
-}
-
 export function useAuth() {
   const router = useRouter();
 
@@ -180,12 +167,10 @@ export function useAuth() {
    * gửi nguyên chuỗi người dùng nhập.
    */
   const login = useCallback(
-    async (account: string, password: string): Promise<void> => {
-      const data = await apiPost<LoginResponse>("/auth/login", { account, password });
-      datPhien({ user: data.user, memberships: data.memberships }, data.token);
-
-      // SYSTEM_ADMIN vào thẳng màn quản lý tài liệu; còn lại vào hỏi đáp.
-      router.push(data.user.roleCode !== "USER" ? "/documents" : "/chat");
+    async (login: string, password: string): Promise<void> => {
+      const data = await apiPost<LoginResponse>("/auth/login", { login, password });
+      datPhien({ user: data.user }, data.token);
+      router.push(trangChuTheoVai(data.user.role));
     },
     [router],
   );
@@ -224,7 +209,7 @@ export function useRestoreSession(): "dang-kiem" | "co-phien" | "khong-co-phien"
       .then((data) => {
         if (huy) return;
         // Ghi đè bằng bản mới nhất từ máy chủ.
-        datPhien({ user: data.user, memberships: data.memberships });
+        datPhien({ user: data.user });
       })
       .catch((error: unknown) => {
         if (huy) return;
@@ -261,7 +246,23 @@ export function initialsOf(name: string): string {
   return (dau + cuoi).toUpperCase();
 }
 
-/** Dòng mô tả dưới tên: "Sinh viên · Khoa Công nghệ Thông tin". */
+/** Trang mở ra sau khi đăng nhập: sinh viên vào hỏi đáp, giáo vụ vào soạn nội dung, quản trị vào tài khoản. */
+export function trangChuTheoVai(role: RoleCode): string {
+  return role === "SYSTEM_ADMIN" ? "/admin/users" : role === "CONTENT_ADMIN" ? "/content" : "/chat";
+}
+
+export function nhanVai(role: RoleCode): string {
+  return role === "SYSTEM_ADMIN" ? "Quản trị viên" : role === "CONTENT_ADMIN" ? "Giáo vụ khoa" : "Sinh viên";
+}
+
+/** Vai trên có mọi quyền của vai dưới: SYSTEM_ADMIN > CONTENT_ADMIN > USER. */
+export function coVai(user: AuthUser | null, can: RoleCode): boolean {
+  if (!user) return false;
+  const bac: Record<RoleCode, number> = { USER: 0, CONTENT_ADMIN: 1, SYSTEM_ADMIN: 2 };
+  return bac[user.role] >= bac[can];
+}
+
+/** Dòng mô tả dưới tên: "Sinh viên · Khoa CNTT". */
 export function describeUser(user: AuthUser): string {
-  return `${user.role} · ${user.scope}`;
+  return `${nhanVai(user.role)} · Khoa ${user.department}`;
 }

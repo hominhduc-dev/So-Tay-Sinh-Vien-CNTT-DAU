@@ -1,37 +1,33 @@
+# Build Java / Maven
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# Web client Next.js
 node_modules/
 .next/
-out/
-dist/
-.env
-.env.local
-*.log
-.DS_Store
-
-# San pham build cua TypeScript, khong theo doi
 *.tsbuildinfo
 
-# Tep goc nguoi dung tai len — du lieu luc chay, khong phai ma nguon.
-# Commit vao day la dua tai lieu noi bo cua truong vao lich su Git vinh vien,
-# trong khi san pham ban giao A yeu cau repo cong khai.
-server/uploads/
+# Biến môi trường, bí mật
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Tệp người dùng tải lên — dữ liệu lúc chạy, không phải mã nguồn
+storage/
 uploads/
 
-# Cau hinh may ca nhan cua trinh soan thao
-.vscode/
-.idea/
-
-# Thu muc lam viec trung gian cua cong cu dung slide bao cao.
-# San pham that nam o docs/*.pptx; phan nay la ban nhap va file kiem tra.
-.codex-finalizer/
-.codex-ppt-build/
-
-# Bản dump CSDL — chứa dữ liệu sinh viên thật, không đưa lên repo.
+# Bản dump CSDL — chứa dữ liệu sinh viên thật
 backup/
 
-# Anh kiem tra hien thi cua so do sequence — san pham render lai duoc.
-# 76 tep, 7,6 MB, doi moi lan chay lai visual-check nen moi lan render la mot
-# lop blob moi trong lich su. Giu diagram.sequence.json va script la du de dung lai.
-docs/use-cases/sequences/**/diagram.visual-check.*.png
+# IDE, hệ điều hành
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.log
 
-# Tep khoa cua Word khi dang mo tai lieu
+# Tệp khóa của Word / PowerPoint khi đang mở
 ~$*

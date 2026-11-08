@@ -48,12 +48,12 @@ export function LoginForm() {
             id="account"
             autoComplete="username"
             className="mt-1"
-            placeholder="2351220193 hoặc duc_2351220193@dau.edu.vn"
+            placeholder="Mã sinh viên / cán bộ hoặc email"
             value={account}
             disabled={dangGui}
             onChange={(event) => { setAccount(event.target.value); setError(null); }}
           />
-          <p className="mt-1 text-[13px] leading-5 text-muted">Mã số sinh viên hoặc email trường.</p>
+          <p className="mt-1 text-[13px] leading-5 text-muted">Mã số hoặc email trường.</p>
         </div>
 
         <div className="mt-3 min-[520px]:mt-0">

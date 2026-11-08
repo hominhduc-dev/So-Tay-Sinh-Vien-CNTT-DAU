@@ -1,25 +1,20 @@
 import Image from "next/image";
 import Link from "next/link";
-import { AdminNavLink } from "./AdminNavLink";
+import { MainNav, type Section } from "./MainNav";
 import { UserMenu } from "./UserMenu";
 
-type HeaderProps = { section: "documents" | "admin" };
-
-export function Header({ section }: HeaderProps) {
+export function Header({ section }: { section: Section }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-base/95 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-[1184px] items-center gap-6 px-6 sm:px-8">
         <Link href="/chat" className="flex min-w-0 items-center gap-2.5 no-underline">
           <Image src="/logo-dau.png" alt="DAU" width={28} height={28} />
-          <span className="truncate font-serif text-base font-semibold sm:text-lg">Sổ Tay Sinh Viên CNTT</span>
+          <span className="truncate font-serif text-[16px] font-semibold text-primary sm:text-[18px]">Sổ Tay Sinh Viên CNTT</span>
         </Link>
-        <nav className="hidden items-center gap-1 sm:flex" aria-label="Điều hướng chính">
-          <Link href="/chat" className="rounded-[8px] px-3 py-2 text-sm text-secondary no-underline hover:bg-sunken">Hỏi đáp</Link>
-          <Link href="/documents" className={section === "documents" ? "rounded-[8px] bg-sunken px-3 py-2 text-sm font-medium no-underline" : "rounded-[8px] px-3 py-2 text-sm text-secondary no-underline hover:bg-sunken"}>Tài liệu</Link>
-          <AdminNavLink active={section === "admin"} />
-        </nav>
+        <MainNav active={section} className="hidden sm:flex" />
         <div className="ml-auto"><UserMenu compact /></div>
       </div>
+      <MainNav active={section} className="flex overflow-x-auto border-t border-border px-4 py-1.5 sm:hidden" />
     </header>
   );
 }

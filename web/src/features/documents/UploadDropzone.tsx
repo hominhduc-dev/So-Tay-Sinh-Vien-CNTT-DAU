@@ -23,7 +23,7 @@ export function UploadDropzone({ onFiles }: { onFiles: (files: File[]) => void }
     >
       <FileUp className="pointer-events-none mb-3 size-6 text-secondary" aria-hidden="true" />
       <div className="pointer-events-none text-[15px] font-medium leading-[26px]">Kéo tệp vào đây để tải lên</div>
-      <div className="pointer-events-none mt-1 text-sm leading-[22px] text-secondary">PDF, DOCX · tối đa 40 MB mỗi tệp</div>
+      <div className="pointer-events-none mt-1 text-sm leading-[22px] text-secondary">PDF, DOCX · tối đa 20 MB mỗi tệp</div>
       <input type="file" accept=".pdf,.docx" multiple aria-label="Chọn tài liệu để tải lên" className="absolute inset-0 cursor-pointer opacity-0" onChange={(event) => pick(event.target.files)} />
     </div>
   );
