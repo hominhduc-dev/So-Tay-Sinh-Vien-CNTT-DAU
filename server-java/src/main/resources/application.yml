@@ -34,4 +34,4 @@ app:
     ttl: ${JWT_TTL:PT8H}
   storage-dir: ${STORAGE_DIR:./storage}
   department: ${APP_DEPARTMENT:CNTT}
-  cors-origins: ${CORS_ORIGINS:http://localhost:3000}
+  cors-origins: ${CORS_ORIGINS:*}

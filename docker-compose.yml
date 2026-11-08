@@ -1,4 +1,4 @@
-# Chạy toàn bộ server: docker compose up --build
+# Chạy toàn bộ hệ thống: docker compose up --build  →  web http://localhost:3000, API :8080
 # Cấu hình bằng tệp .env cùng thư mục (chép từ .env.example).
 services:
   db:
@@ -21,7 +21,7 @@ services:
       DB_USER: tangthu
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Đặt JWT_SECRET (≥ 32 ký tự) trong .env}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
       FLYWAY_LOCATIONS: ${FLYWAY_LOCATIONS:-classpath:db/migration,classpath:db/demo}
     volumes:
       - storage:/data/storage
@@ -30,6 +30,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  web:
+    build:
+      context: ./web
+      args:
+        API_INTERNAL_URL: http://api:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
 
 volumes:
   pgdata: {}

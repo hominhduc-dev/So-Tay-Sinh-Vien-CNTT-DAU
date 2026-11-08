@@ -30,6 +30,7 @@ Docker Compose.
 ## Trạng thái
 
 - **Server:** [`server-java/`](server-java/README.md) — Spring Boot, đủ 17 use case, 15 kiểm thử tích hợp.
-  Chạy: `cp .env.example .env` rồi `docker compose up --build`.
-- **Web client:** chưa có; client gọi REST API theo `DAC-TA-TRIEN-KHAI.md` mục 6.
+- Chạy toàn bộ: `cp .env.example .env` rồi `docker compose up --build`.
+- **Web client:** [`web/`](web/README.md) — Next.js, chatbot dạng nút, trang giáo vụ và quản trị.
+  Mở `http://localhost:3000` (tài khoản demo trong `server-java/README.md`).
 - Mã nguồn bản cũ (Node.js/Next.js, RAG với Gemini) đã gỡ; vẫn xem lại được trong lịch sử git.

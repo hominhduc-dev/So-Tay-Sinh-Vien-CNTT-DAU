@@ -23,7 +23,7 @@ cp .env.example .env      # rồi sửa DB_PASSWORD, JWT_SECRET
 docker compose up --build
 ```
 
-API ở `http://localhost:8080/api`.
+Web ở `http://localhost:3000`, API ở `http://localhost:8080/api`.
 
 ## Chạy trực tiếp (cần Java 21, Maven, PostgreSQL 16)
 
@@ -40,7 +40,7 @@ mvn spring-boot:run
 | `JWT_SECRET` | — (bắt buộc) | Khóa ký token, ≥ 32 ký tự |
 | `JWT_TTL` | `PT8H` | Thời hạn token |
 | `STORAGE_DIR` | `./storage` | Thư mục lưu tệp tài liệu |
-| `CORS_ORIGINS` | `http://localhost:3000` | Web client được phép gọi |
+| `CORS_ORIGINS` | `*` | Origin được phép gọi API (mẫu, cách nhau bằng dấu phẩy) |
 | `FLYWAY_LOCATIONS` | `classpath:db/migration,classpath:db/demo` | Bỏ `db/demo` khi triển khai thật |
 | `PORT` | `8080` | Cổng HTTP |
 

@@ -4,10 +4,16 @@ target/
 *.jar
 !.mvn/wrapper/maven-wrapper.jar
 
+# Web client Next.js
+node_modules/
+.next/
+*.tsbuildinfo
+
 # Biến môi trường, bí mật
 .env
 .env.*
 !.env.example
+!.env.local.example
 
 # Tệp người dùng tải lên — dữ liệu lúc chạy, không phải mã nguồn
 storage/

@@ -66,7 +66,11 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource(AppProperties props) {
         var cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(props.corsOrigins() == null ? List.of() : props.corsOrigins());
+        // Pattern để nhận cả "*" lẫn danh sách cụ thể. Mặc định "*" là an toàn ở đây vì API
+        // xác thực bằng header Bearer mà trình duyệt KHÔNG tự gửi kèm (khác cookie), nên trang
+        // lạ không mượn được phiên. Web client gọi qua proxy cùng gốc; khi chạy trong LAN, origin
+        // là IP của máy chủ web — danh sách cố định sẽ chặn nhầm.
+        cfg.setAllowedOriginPatterns(props.corsOrigins() == null ? List.of("*") : props.corsOrigins());
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         cfg.setExposedHeaders(List.of("Content-Disposition"));
