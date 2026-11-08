@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import vn.tangthu.account.UserRepository;
+import vn.tangthu.chat.InquiryRepository;
 import vn.tangthu.common.ApiException;
 import vn.tangthu.common.FileStorage;
 import vn.tangthu.common.PageResponse;
@@ -28,13 +29,15 @@ public class DocumentService {
     private final QuestionRepository questions;
     private final UserRepository users;
     private final FileStorage storage;
+    private final InquiryRepository inquiries;
 
     public DocumentService(DocumentRepository documents, QuestionRepository questions, UserRepository users,
-                           FileStorage storage) {
+                           FileStorage storage, InquiryRepository inquiries) {
         this.documents = documents;
         this.questions = questions;
         this.users = users;
         this.storage = storage;
+        this.inquiries = inquiries;
     }
 
     /** UC07 */
@@ -106,10 +109,10 @@ public class DocumentService {
     @Transactional
     public void remove(UUID id) {
         Document d = require(id);
-        long used = questions.countByDocumentId(id);
+        long used = questions.countByDocumentId(id) + inquiries.countByDocumentId(id);
         if (used > 0) {
             throw ApiException.conflict("DOCUMENT_IN_USE",
-                    "Tài liệu đang được dùng làm nguồn cho " + used + " câu hỏi.");
+                    "Tài liệu đang được dùng làm nguồn cho " + used + " câu trả lời.");
         }
         String rel = d.getFileUrl();
         documents.delete(d);

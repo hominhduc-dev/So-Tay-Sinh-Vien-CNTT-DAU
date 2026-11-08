@@ -1,7 +1,9 @@
 package vn.tangthu.chat;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.util.UUID;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,7 @@ import vn.tangthu.common.AuthUser;
 import vn.tangthu.common.PageResponse;
 import vn.tangthu.chat.ChatDtos.ChatResponse;
 import vn.tangthu.chat.ChatDtos.ConversationDetail;
+import vn.tangthu.chat.ChatDtos.TypedResponse;
 
 @RestController
 public class ChatController {
@@ -27,6 +30,14 @@ public class ChatController {
     }
 
     public record AskRequest(@NotNull UUID questionId, UUID conversationId) {}
+
+    public record TypedRequest(@NotBlank @Size(min = 3, max = 500) String text, UUID conversationId) {}
+
+    /** UC24 — sinh viên gõ câu hỏi; server tìm câu hỏi soạn sẵn khớp nhất. */
+    @PostMapping("/api/chat/typed")
+    public TypedResponse typed(@AuthenticationPrincipal AuthUser me, @Valid @RequestBody TypedRequest req) {
+        return chat.askTyped(me.id(), req.text(), req.conversationId());
+    }
 
     /** UC05 — sinh viên bấm một nút câu hỏi. */
     @PostMapping("/api/chat")

@@ -38,9 +38,14 @@ public class Message {
     @Column(name = "sent_at")
     private Instant sentAt;
 
-    Message(Conversation conversation, Question question) {
+    /** Câu sinh viên đã gõ khi hệ thống trả lời bằng câu hỏi soạn sẵn khớp nhất (UC24); null khi bấm nút. */
+    @Column(name = "typed_text")
+    private String typedText;
+
+    Message(Conversation conversation, Question question, String typedText) {
         this.conversation = conversation;
         this.question = question;
+        this.typedText = typedText;
         this.sentAt = Instant.now();
     }
 }

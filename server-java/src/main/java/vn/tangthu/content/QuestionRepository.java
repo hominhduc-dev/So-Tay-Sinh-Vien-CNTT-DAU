@@ -16,6 +16,9 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
     @EntityGraph(attributePaths = {"document"})
     Optional<Question> findByIdAndActiveTrue(UUID id);
 
+    @EntityGraph(attributePaths = {"document"})
+    List<Question> findByActiveTrue();
+
     boolean existsByTopicId(UUID topicId);
 
     long countByDocumentId(UUID documentId);

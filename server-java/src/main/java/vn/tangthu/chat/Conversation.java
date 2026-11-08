@@ -46,18 +46,23 @@ public class Conversation {
     @OrderBy("sentAt")
     private List<Message> messages = new ArrayList<>();
 
-    /** Hội thoại mới, tiêu đề là nội dung câu hỏi đầu tiên. */
-    public static Conversation start(User user, Question first) {
+    /** Hội thoại mới, tiêu đề là câu hỏi đầu tiên (câu đã gõ, hoặc chữ trên nút). */
+    public static Conversation start(User user, String title) {
         Conversation c = new Conversation();
         c.user = user;
-        c.title = first.getContent();
+        c.title = title.length() > 200 ? title.substring(0, 197) + "…" : title;
         c.createdAt = Instant.now();
         return c;
     }
 
-    /** +ask(in q: Question): Message */
+    /** +ask(in q: Question): Message — sinh viên bấm nút câu hỏi. */
     public Message ask(Question q) {
-        Message m = new Message(this, q);
+        return ask(q, null);
+    }
+
+    /** Sinh viên gõ câu hỏi và hệ thống chọn được câu soạn sẵn khớp nhất. */
+    public Message ask(Question q, String typedText) {
+        Message m = new Message(this, q, typedText);
         messages.add(m);
         return m;
     }

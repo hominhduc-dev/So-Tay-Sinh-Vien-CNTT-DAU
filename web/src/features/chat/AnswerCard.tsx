@@ -21,10 +21,15 @@ export function AnswerCard({ message }: { message: ChatMessage }) {
   return (
     <div className="animate-message mb-9">
       <div className="mb-5 flex justify-end">
-        <div className="max-w-[80%] rounded-[12px] bg-sunken px-4 py-3 text-[15px] leading-[26px]">{message.question.content}</div>
+        <div className="max-w-[80%] rounded-[12px] bg-sunken px-4 py-3 text-[15px] leading-[26px]">{message.typedText ?? message.question.content}</div>
       </div>
       <article>
         <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted">Trả lời</div>
+        {message.typedText && (
+          <p className="mb-2 text-[13px] leading-5 text-secondary">
+            Câu hỏi có sẵn gần nhất: <span className="font-medium text-primary">{message.question.content}</span>
+          </p>
+        )}
         <p className="reading-width m-0 whitespace-pre-line text-[17px] leading-8">{message.answer}</p>
         <button
           type="button"

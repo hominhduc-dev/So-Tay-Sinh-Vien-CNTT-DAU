@@ -56,7 +56,7 @@ class ApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        jdbc.execute("TRUNCATE messages, conversations, questions, topics, documents, users CASCADE");
+        jdbc.execute("TRUNCATE inquiries, messages, conversations, questions, topics, documents, users CASCADE");
         student = users.save(new User("SV1", "sv1@test", encoder.encode(PWD), "Sinh viên 1", Role.USER, "CNTT"));
         student2 = users.save(new User("SV2", "sv2@test", encoder.encode(PWD), "Sinh viên 2", Role.USER, "CNTT"));
         teacher = users.save(new User("GV1", "gv1@test", encoder.encode(PWD), "Giáo vụ 1", Role.CONTENT_ADMIN, "CNTT"));
@@ -270,5 +270,80 @@ class ApiIntegrationTest {
         call(put("/api/auth/password"), sv, Map.of("currentPassword", PWD, "newPassword", "MatKhauMoi1"))
                 .andExpect(status().isNoContent());
         call(post("/api/auth/login"), null, Map.of("login", "SV1", "password", "MatKhauMoi1")).andExpect(status().isOk());
+    }
+
+    // ---------- UC24–UC27: gõ câu hỏi, gửi giáo vụ ----------
+
+    /** Thêm câu thứ hai vào chủ đề của content(): "Khi nào mở cổng đăng ký học phần?". */
+    String secondQuestion(String gv, String[] c) throws Exception {
+        return read(call(post("/api/questions"), gv, Map.of("topicId", c[0],
+                        "content", "Khi nào mở cổng đăng ký học phần?", "answer", "Mở 2 tuần trước học kỳ.",
+                        "documentId", c[1], "page", 2))
+                .andExpect(status().isCreated())).get("id").asText();
+    }
+
+    @Test @DisplayName("UC24. Gõ câu hỏi khớp rõ → trả lời ngay bằng câu soạn sẵn, lưu câu đã gõ")
+    void typedAnswered() throws Exception {
+        String gv = token("GV1");
+        String[] c = content(gv);
+        secondQuestion(gv, c);
+        String sv = token("SV1");
+        JsonNode r = read(call(post("/api/chat/typed"), sv, Map.of("text", "Đăng ký tối đa mấy tín chỉ một học kì?"))
+                .andExpect(status().isOk()));
+        org.assertj.core.api.Assertions.assertThat(r.get("status").asText()).isEqualTo("ANSWERED");
+        org.assertj.core.api.Assertions.assertThat(r.at("/message/question/id").asText()).isEqualTo(c[2]);
+        org.assertj.core.api.Assertions.assertThat(r.at("/message/typedText").asText()).isEqualTo("Đăng ký tối đa mấy tín chỉ một học kì?");
+        String conv = r.get("conversationId").asText();
+        call(get("/api/conversations/" + conv), sv, null)
+                .andExpect(jsonPath("$.title", is("Đăng ký tối đa mấy tín chỉ một học kì?")))
+                .andExpect(jsonPath("$.messages[0].typedText", is("Đăng ký tối đa mấy tín chỉ một học kì?")));
+    }
+
+    @Test @DisplayName("UC24. Gõ câu mơ hồ → gợi ý, không lưu tin nhắn; không khớp → NO_MATCH")
+    void typedSuggestionsAndNoMatch() throws Exception {
+        String gv = token("GV1");
+        String[] c = content(gv);
+        String q2 = secondQuestion(gv, c);
+        String sv = token("SV1");
+        JsonNode s = read(call(post("/api/chat/typed"), sv, Map.of("text", "đăng ký tín chỉ")).andExpect(status().isOk()));
+        org.assertj.core.api.Assertions.assertThat(s.get("status").asText()).isEqualTo("SUGGESTIONS");
+        org.assertj.core.api.Assertions.assertThat(s.get("message").isNull()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(s.get("suggestions").findValuesAsText("id")).containsExactlyInAnyOrder(c[2], q2);
+        call(post("/api/chat/typed"), sv, Map.of("text", "Thủ tục xin học bổng khuyến khích"))
+                .andExpect(jsonPath("$.status", is("NO_MATCH"))).andExpect(jsonPath("$.suggestions", hasSize(0)));
+        call(get("/api/conversations"), sv, null).andExpect(jsonPath("$.total", is(0)));
+        call(post("/api/chat/typed"), sv, Map.of("text", "ab")).andExpect(status().isBadRequest());
+    }
+
+    @Test @DisplayName("UC25–UC27. Gửi câu hỏi cho giáo vụ, giáo vụ trả lời kèm nguồn, sinh viên xem được")
+    void inquiryFlow() throws Exception {
+        String gv = token("GV1");
+        String[] c = content(gv);
+        String sv = token("SV1");
+        String id = read(call(post("/api/inquiries"), sv, Map.of("content", "Thủ tục xin học bổng khuyến khích?"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.status", is("PENDING")))).get("id").asText();
+        call(get("/api/inquiries"), sv, null).andExpect(status().isForbidden());
+        call(get("/api/inquiries/mine"), token("SV2"), null).andExpect(jsonPath("$.total", is(0)));
+        call(get("/api/inquiries?status=PENDING"), gv, null).andExpect(jsonPath("$.items", hasSize(1)))
+                .andExpect(jsonPath("$.items[0].askerCode", is("SV1")));
+        call(post("/api/inquiries/" + id + "/answer"), gv, Map.of("answer", "Xem Điều 5.", "documentId", c[1], "page", 11))
+                .andExpect(status().isBadRequest());
+        call(post("/api/inquiries/" + id + "/answer"), gv, Map.of("answer", "Xem Điều 5 quy chế.", "documentId", c[1], "page", 3))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status", is("ANSWERED")));
+        call(get("/api/inquiries/mine"), sv, null)
+                .andExpect(jsonPath("$.items[0].answer", is("Xem Điều 5 quy chế.")))
+                .andExpect(jsonPath("$.items[0].source.page", is(3)));
+        call(get("/api/inquiries?status=PENDING"), gv, null).andExpect(jsonPath("$.items", hasSize(0)));
+        call(delete("/api/documents/" + c[1]), gv, null).andExpect(status().isConflict());
+    }
+
+    @Test @DisplayName("BR08. Tối đa 5 câu hỏi chờ trả lời mỗi sinh viên")
+    void pendingLimit() throws Exception {
+        String sv = token("SV1");
+        for (int i = 0; i < 5; i++) {
+            call(post("/api/inquiries"), sv, Map.of("content", "Câu hỏi số " + i)).andExpect(status().isCreated());
+        }
+        call(post("/api/inquiries"), sv, Map.of("content", "Câu hỏi thứ sáu"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.error.code", is("TOO_MANY_PENDING")));
     }
 }

@@ -9,6 +9,8 @@ export type Source = { documentId: string; title: string; page: number };
 export type ChatMessage = {
   id: string;
   sentAt: string;
+  /** Câu sinh viên đã gõ (UC24); null khi bấm nút. */
+  typedText: string | null;
   question: { id: string; content: string };
   answer: string;
   source: Source;
@@ -24,3 +26,29 @@ export const hoi = (questionId: string, conversationId: string | null) =>
   apiPost<{ conversationId: string; message: ChatMessage }>("/chat", { questionId, conversationId });
 export const layHoiThoai = () => apiGet<Page<ConversationSummary>>("/conversations?size=50");
 export const chiTietHoiThoai = (id: string) => apiGet<ConversationDetail>(`/conversations/${id}`);
+
+// --- UC24: gõ câu hỏi ---------------------------------------------------------
+export type TypedStatus = "ANSWERED" | "SUGGESTIONS" | "NO_MATCH";
+export type TypedResponse = {
+  status: TypedStatus;
+  conversationId: string | null;
+  message: ChatMessage | null;
+  suggestions: QuestionButton[];
+};
+export const hoiBangChu = (text: string, conversationId: string | null) =>
+  apiPost<TypedResponse>("/chat/typed", { text, conversationId });
+
+// --- UC25, UC26: câu hỏi gửi giáo vụ ------------------------------------------
+export type Inquiry = {
+  id: string;
+  content: string;
+  status: "PENDING" | "ANSWERED";
+  answer: string | null;
+  source: Source | null;
+  createdAt: string;
+  answeredAt: string | null;
+  askerName: string | null;
+  askerCode: string | null;
+};
+export const guiGiaoVu = (content: string) => apiPost<Inquiry>("/inquiries", { content });
+export const cauHoiDaGui = () => apiGet<Page<Inquiry>>("/inquiries/mine?size=50");
