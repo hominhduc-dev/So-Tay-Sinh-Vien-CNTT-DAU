@@ -1,6 +1,6 @@
 # Đặc tả triển khai — Sổ Tay Sinh Viên CNTT (Spring Boot)
 
-**Phiên bản:** 1.0 · 07/11/2026
+**Phiên bản:** 1.1 · 08/11/2026
 **Nguồn thiết kế:** slide Chương 3 (BFD, IFD, DFD, ERD, biểu đồ lớp, CSDL) và
 `docs/slides/SRS-tac-nhan-va-use-case.pptx`.
 
@@ -15,20 +15,21 @@ pgvector, SSE) và mã Node.js đã gỡ khỏi repo; khi có mâu thuẫn với
 ### 1.1. Bài toán
 
 Sinh viên ngành CNTT tra cứu quy định học vụ (đăng ký học phần, điều kiện đồ án, chuẩn đầu ra, bảo
-lưu, cảnh báo học vụ, xét tốt nghiệp) qua một **chatbot dạng nút chọn**:
+lưu, cảnh báo học vụ, xét tốt nghiệp) qua một **chatbot**:
 
-1. Sinh viên mở khung chat, thấy các **nút chủ đề**.
-2. Bấm một chủ đề → thấy các **nút câu hỏi** của chủ đề đó.
-3. Bấm một câu hỏi → server trả **câu trả lời do giáo vụ soạn sẵn**, kèm **tài liệu nguồn và số trang**.
+1. Sinh viên mở khung chat, thấy các **nút chủ đề**; bấm một chủ đề → thấy các **nút câu hỏi**.
+2. Bấm một câu hỏi → server trả **câu trả lời do giáo vụ soạn sẵn**, kèm **tài liệu nguồn và số trang**.
+3. Hoặc **gõ câu hỏi** → server so khớp từ khóa với các câu hỏi soạn sẵn: khớp rõ thì trả lời ngay,
+   khớp vừa thì gợi ý, không khớp thì sinh viên **gửi câu hỏi cho giáo vụ** và nhận câu trả lời sau.
 
-Hệ thống **không dùng AI**, không nhận câu hỏi gõ tự do. Ngoài phạm vi: điểm, học phí, lịch học cá
-nhân, đăng ký tín chỉ, nhiều khoa, SSO, OCR.
+Hệ thống **không dùng AI**: mọi câu trả lời đều do giáo vụ viết. Ngoài phạm vi: điểm, học phí, lịch học
+cá nhân, đăng ký tín chỉ, nhiều khoa, SSO, OCR.
 
 ### 1.2. Kiến trúc client–server
 
 ```
  Trình duyệt (client)  ──HTTP request (JSON, JWT)──▶  Spring Boot server  ──JDBC──▶  PostgreSQL 16
- Sinh viên / Giáo vụ / ◀──HTTP response (JSON/tệp)──  REST API /api/*                 6 bảng
+ Sinh viên / Giáo vụ / ◀──HTTP response (JSON/tệp)──  REST API /api/*                 7 bảng
  Quản trị viên                                         + thư mục lưu tệp tài liệu
 ```
 
@@ -66,9 +67,11 @@ Mỗi tài khoản có **đúng một** `role` và **một** `department` (đơn
 | Chức năng | Sinh viên | Giáo vụ | Quản trị viên |
 |---|---|---|---|
 | Đăng nhập / đăng xuất, đổi mật khẩu | Có | Có | Có |
-| Chọn câu hỏi, xem hội thoại của mình | Có | Có | Có |
+| Chọn hoặc gõ câu hỏi, xem hội thoại của mình | Có | Có | Có |
+| Gửi câu hỏi cho giáo vụ, xem câu trả lời | Có | Có | Có |
 | Đọc tài liệu, mở tệp gốc | Có | Có | Có |
 | Quản lý tài liệu, chủ đề, câu hỏi – trả lời | — | Có | Có |
+| Trả lời câu hỏi sinh viên gửi | — | Có | Có |
 | Xem, khóa / mở, phân quyền tài khoản | — | — | Có |
 | Kiểm tra trạng thái hệ thống | — | — | Có |
 | Tự khóa hoặc tự hạ vai của chính mình | — | — | — |
@@ -86,12 +89,16 @@ Mỗi tài khoản có **đúng một** `role` và **một** `department` (đơn
 | M2 · Hỏi đáp | UC05 | Chọn câu hỏi, nhận trả lời | Sinh viên |
 | | UC06 | Xem lại hội thoại | Sinh viên |
 | | UC08 | Xem nguồn trích dẫn (mở tệp gốc tại trang) | Sinh viên |
+| | UC24 | Gõ câu hỏi | Sinh viên |
+| | UC25 | Gửi câu hỏi cho giáo vụ | Sinh viên |
+| | UC26 | Xem câu trả lời của giáo vụ | Sinh viên |
 | M3 · Nội dung | UC07 | Tra cứu kho tài liệu | Sinh viên |
 | | UC10 | Tải lên tài liệu | Giáo vụ |
 | | UC11 | Sửa thông tin tài liệu | Giáo vụ |
 | | UC12 | Gỡ tài liệu | Giáo vụ |
 | | UC22 | Quản lý chủ đề | Giáo vụ |
 | | UC23 | Quản lý câu hỏi – câu trả lời | Giáo vụ |
+| | UC27 | Trả lời câu hỏi của sinh viên | Giáo vụ |
 | M4 · Quản trị | UC14 | Tra cứu người dùng | Quản trị viên |
 | | UC15 | Khóa / mở tài khoản | Quản trị viên |
 | | UC16 | Phân quyền (đổi vai) | Quản trị viên |
@@ -110,21 +117,24 @@ Mã đã bỏ, không hiện thực: UC09, UC13, UC18, UC19, UC21.
 | BR03 | Sinh viên chỉ đọc; giáo vụ và quản trị viên mới ghi nội dung; chỉ quản trị viên đổi tài khoản | `@PreAuthorize` theo vai trên từng endpoint |
 | BR04 | Quản trị viên không tự khóa hay tự hạ vai của chính mình | `AdminService` từ chối khi `targetId == currentUserId` → 400 `SELF_MODIFICATION` |
 | BR05 | Hội thoại thuộc riêng người tạo; mở nguồn và tệp gốc phải đăng nhập | Truy vấn hội thoại luôn kèm `user_id`; không phải chủ → 404 |
-| BR06 | Chatbot chỉ trả lời các câu hỏi có sẵn; mỗi câu trả lời soạn sẵn phải gắn tài liệu nguồn | `POST /api/chat` chỉ nhận `questionId`; `UC23` bắt buộc `documentId` và `page` |
+| BR06 | Mỗi câu hỏi soạn sẵn phải gắn tài liệu nguồn và số trang | `UC23` bắt buộc `documentId` và `page` |
+| BR07 | Không tự sinh câu trả lời: câu gõ chỉ được trả lời bằng câu soạn sẵn khớp, hoặc do giáo vụ viết | `QuestionMatcher` chỉ chọn trong `questions`; không khớp → `NO_MATCH`, không lưu gì |
+| BR08 | Tối đa 5 câu hỏi chờ trả lời mỗi sinh viên | `InquiryService.send` đếm `PENDING` → 409 `TOO_MANY_PENDING` |
 
 ---
 
 ## 5. Cơ sở dữ liệu
 
-### 5.1. ERD (6 thực thể)
+### 5.1. ERD (7 thực thể)
 
 ```
+User 1 ──asks──── 0..* Inquiry 0..* ──cites── 0..1 Document
 User 1 ──owns──── 0..* Conversation 1 ──contains── 0..* Message
-  1                                                     0..*
-  │ uploads                                               │ refers to
-0..*                                                      1
-Document 0..1 ──cited by── 0..* Question 0..* ──belongs to── 1 Topic
+User 1 ──uploads─ 0..* Document 1 ──cited by── 0..* Question
+Message 0..* ──refers to── 1 Question 0..* ──belongs to── 1 Topic
 ```
+
+Inquiry (câu hỏi gửi giáo vụ) thuộc người gửi; khi đã trả lời có thể dẫn tới một Document.
 
 ### 5.2. DDL — `src/main/resources/db/migration/V1__init.sql`
 
@@ -197,6 +207,29 @@ Ghi chú thiết kế:
 - `questions.document_id` bắt buộc theo BR06. RESTRICT làm UC12 thất bại khi tài liệu còn câu hỏi
   dẫn tới (kể cả câu hỏi đã ẩn).
 - `topics` RESTRICT: không xóa được chủ đề còn câu hỏi.
+
+### 5.2b. DDL bổ sung — `V3__typed_questions.sql` (UC24–UC27)
+
+```sql
+ALTER TABLE messages ADD COLUMN typed_text varchar(500);   -- câu sinh viên đã gõ; NULL khi bấm nút
+
+CREATE TABLE inquiries (
+    id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     uuid          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content     varchar(500)  NOT NULL,
+    status      varchar(20)   NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ANSWERED')),
+    answer      varchar(5000),
+    document_id uuid          REFERENCES documents(id) ON DELETE RESTRICT,
+    page        integer       CHECK (page >= 1),
+    answered_by uuid          REFERENCES users(id) ON DELETE SET NULL,
+    created_at  timestamptz   NOT NULL DEFAULT now(),
+    answered_at timestamptz,
+    CHECK ((status = 'PENDING' AND answer IS NULL) OR (status = 'ANSWERED' AND answer IS NOT NULL)),
+    CHECK ((document_id IS NULL) = (page IS NULL))
+);
+```
+
+`documents` còn được câu trả lời của giáo vụ dẫn tới thì cũng không gỡ được (UC12 → 409 `DOCUMENT_IN_USE`).
 
 ### 5.3. Dữ liệu mẫu — `db/demo/V2__demo_data.sql`
 
@@ -292,6 +325,37 @@ nếu hội thoại không thuộc người gọi. Hội thoại mới lấy `ti
 **UC06 — `GET /api/conversations/{id}`** → 200 `{ "id", "title", "createdAt", "messages": [ <message như UC05> ] }`.
 Không phải chủ → 404.
 
+**UC24 — `POST /api/chat/typed`** (mọi vai)
+```json
+// request
+{ "text": "Đăng ký tối đa mấy tín chỉ một học kì?", "conversationId": null }   // 3–500 ký tự
+// 200
+{ "status": "ANSWERED",            // hoặc "SUGGESTIONS" | "NO_MATCH"
+  "conversationId": "…",           // null khi chưa trả lời
+  "message": { <như UC05, thêm "typedText": "Đăng ký tối đa mấy tín chỉ một học kì?"> },   // null khi chưa trả lời
+  "suggestions": [ { "id": "…", "content": "Khi nào mở cổng đăng ký học phần?" } ] }
+```
+
+So khớp (`QuestionMatcher`): chữ thường → bỏ từ hư trên chữ còn dấu → bỏ dấu, `đ → d`, `y → i`. Điểm
+= 0,7 × (tỉ lệ từ khóa câu gõ có trong câu hỏi; chỉ có trong câu trả lời tính 0,5) + 0,3 × (tỉ lệ từ khóa
+câu hỏi có trong câu gõ).
+
+| Kết quả | Điều kiện | Server làm gì |
+|---|---|---|
+| `ANSWERED` | điểm cao nhất ≥ 0,6 và hơn câu thứ hai ≥ 0,1 | Lưu tin nhắn (kèm `typedText`), trả câu trả lời + tối đa 2 câu liên quan |
+| `SUGGESTIONS` | điểm cao nhất ≥ 0,25 | Không lưu; trả tối đa 3 câu gần nhất |
+| `NO_MATCH` | còn lại | Không lưu; client mời gửi giáo vụ (UC25) |
+
+**UC25 — `POST /api/inquiries`** (mọi vai) `{ "content": "…" }` (3–500 ký tự) → 201 câu hỏi ở trạng thái
+`PENDING`. Lỗi 409 `TOO_MANY_PENDING` khi đang có 5 câu chờ (BR08).
+
+**UC26 — `GET /api/inquiries/mine`** (của chính mình, phân trang, mới nhất trước)
+```json
+{ "items": [ { "id": "…", "content": "…", "status": "ANSWERED", "answer": "…",
+  "source": { "documentId": "…", "title": "…", "page": 3 },   // null nếu giáo vụ không kèm nguồn
+  "createdAt": "…", "answeredAt": "…" } ], … }
+```
+
 **UC08 — `GET /api/documents/{id}/file`** (mọi vai) → tệp gốc, `Content-Type` theo `mime_type`,
 `Content-Disposition: inline`. Client mở PDF tại trang bằng `…/file#page=12`.
 
@@ -333,6 +397,16 @@ Lỗi: 409 `DOCUMENT_IN_USE` nếu còn câu hỏi dẫn tới.
 Kiểm tra: `page ≥ 1` và `page ≤ page_count` khi tài liệu có `page_count`; chủ đề và tài liệu phải
 tồn tại (400 `VALIDATION_ERROR` nếu sai).
 
+**UC27 — hộp thư câu hỏi** (CONTENT_ADMIN)
+
+| Method | Đường dẫn | Body | Kết quả |
+|---|---|---|---|
+| GET | `/api/inquiries?status=PENDING` | — | Câu chờ trả lời, cũ nhất trước, kèm `askerName`, `askerCode`; `status=ANSWERED` hoặc bỏ trống để xem câu đã trả lời |
+| POST | `/api/inquiries/{id}/answer` | `{ "answer" (≤5000), "documentId"?, "page"? }` | 200, trạng thái `ANSWERED`; gửi lại để sửa câu trả lời |
+
+Có `documentId` thì bắt buộc `page` hợp lệ; có `page` mà không có `documentId` → 400. Muốn lưu thành câu
+hỏi có sẵn, client gọi thêm `POST /api/questions` (UC23).
+
 ### 6.5. M4 · Quản trị
 
 **UC14 — `GET /api/users?q=&page=&size=`** (SYSTEM_ADMIN) — tìm theo mã, email, họ tên
@@ -369,6 +443,17 @@ Có hiệu lực ngay request kế tiếp của người bị sửa (BR02).
 7. Server trả câu trả lời kèm nguồn; client hiện thành một lượt hỏi – đáp.
 8. Sinh viên mở nguồn (UC08) bằng `GET /api/documents/{id}/file#page=N`.
 
+**UC24 → UC25 → UC27 → UC26 — Gõ câu hỏi, gửi giáo vụ**
+
+1. Sinh viên gõ câu hỏi; client gửi `POST /api/chat/typed`.
+2. Server so khớp với mọi câu hỏi `is_active` (mục 6.3). `ANSWERED` → lưu tin nhắn, trả câu trả lời; dừng.
+3. `SUGGESTIONS` → client hiện "Có phải bạn muốn hỏi" và các nút; bấm nút → như UC05 bước 4.
+4. `NO_MATCH` (hoặc sinh viên chọn "Không đúng") → bấm "Gửi câu hỏi cho giáo vụ" → `POST /api/inquiries`.
+5. Giáo vụ mở hộp thư (`GET /api/inquiries?status=PENDING`), viết câu trả lời, chọn nguồn →
+   `POST /api/inquiries/{id}/answer`; tùy chọn lưu thành câu hỏi có sẵn (`POST /api/questions`).
+6. Sinh viên mở "Câu hỏi đã gửi" (`GET /api/inquiries/mine`) để đọc câu trả lời và mở nguồn.
+7. Câu đã lưu thành câu hỏi có sẵn: lần sau sinh viên khác gõ câu tương tự sẽ được trả lời ngay ở bước 2.
+
 **UC10 → UC22 → UC23 — Nhập nội dung (Giáo vụ)**
 
 1. Tải lên PDF / DOCX, nhập tiêu đề (UC10).
@@ -403,14 +488,15 @@ server-java/
     │   ├── common/            # SecurityConfig, JwtService, JwtAuthFilter, AuthUser,
     │   │                      # ApiException, GlobalExceptionHandler, PageResponse, FileStorage
     │   ├── account/           # M1: User, Role, UserRepository, AuthController, AuthService
-    │   ├── chat/              # M2: Conversation, Message, repositories, ChatController, ChatService
+    │   ├── chat/              # M2: Conversation, Message, Inquiry, QuestionMatcher, repositories,
+    │   │                      #     ChatController, ChatService, InquiryController, InquiryService
     │   ├── content/           # M3: Topic, Question, Document, repositories,
     │   │                      #     TopicController, QuestionController, DocumentController, services
     │   └── admin/             # M4: AdminController (users), HealthController, AdminService
     └── resources/
         ├── application.yml
         └── db/
-            ├── migration/     # V1__init.sql — lược đồ
+            ├── migration/     # V1__init.sql — lược đồ; V3__typed_questions.sql — UC24–UC27
             └── demo/          # V2__demo_data.sql — tắt bằng FLYWAY_LOCATIONS khi triển khai thật
 ```
 
@@ -724,10 +810,15 @@ Kiểm thử tích hợp (`@SpringBootTest` + `MockMvc`, CSDL PostgreSQL thử n
 | 12 | Tạo câu hỏi với `page` > `page_count` | 400 `VALIDATION_ERROR` |
 | 13 | Ẩn câu hỏi rồi xem lại hội thoại cũ có câu hỏi đó | Vẫn hiển thị câu hỏi và câu trả lời |
 | 14 | `GET /api/health` khi CSDL dừng | 200, `database: "DOWN"` |
+| 15 | Gõ câu gần nguyên văn một câu hỏi soạn sẵn (khác dấu, "kì"/"kỳ") | `ANSWERED`, tin nhắn lưu `typedText` |
+| 16 | Gõ câu khớp ngang nhau hai câu hỏi | `SUGGESTIONS` chứa cả hai, không lưu tin nhắn |
+| 17 | Gõ câu không liên quan | `NO_MATCH`, danh sách gợi ý rỗng |
+| 18 | Gửi câu hỏi → giáo vụ trả lời kèm nguồn → sinh viên xem | `PENDING` → `ANSWERED`; sinh viên khác không thấy; sinh viên gọi hộp thư → 403 |
+| 19 | Gửi câu thứ 6 khi đang có 5 câu chờ | 409 `TOO_MANY_PENDING` |
 
-Nghiệm thu thủ công theo ba vai: sinh viên chọn chủ đề → câu hỏi → mở nguồn đúng trang; giáo vụ tải
-tài liệu, tạo chủ đề, soạn câu hỏi rồi thấy nút mới phía sinh viên; quản trị viên khóa tài khoản,
-đổi vai, xem trạng thái hệ thống.
+Nghiệm thu thủ công theo ba vai: sinh viên chọn chủ đề → câu hỏi → mở nguồn đúng trang, gõ câu hỏi và
+gửi giáo vụ; giáo vụ tải tài liệu, tạo chủ đề, soạn câu hỏi, trả lời hộp thư rồi thấy nút mới phía sinh
+viên; quản trị viên khóa tài khoản, đổi vai, xem trạng thái hệ thống.
 
 ---
 
@@ -737,12 +828,13 @@ tài liệu, tạo chủ đề, soạn câu hỏi rồi thấy nút mới phía 
 |---|---|
 | Module M1–M4 (BFD) | Package `account`, `chat`, `content`, `admin` |
 | 3 tác nhân (DFD, use case) | `Role` + `RoleHierarchy` |
-| 6 thực thể (ERD) | 6 bảng trong `V1__init.sql` |
-| 6 lớp (biểu đồ lớp) | 6 `@Entity`: `User`, `Topic`, `Question`, `Document`, `Conversation`, `Message` |
+| 7 thực thể (ERD) | 7 bảng: `V1__init.sql` + `inquiries` trong `V3__typed_questions.sql` |
+| 7 lớp (biểu đồ lớp) | 7 `@Entity`: `User`, `Topic`, `Question`, `Document`, `Conversation`, `Message`, `Inquiry` |
+| `Inquiry.answer(text, source, page)` | Phương thức trên entity `Inquiry`, gọi từ `InquiryService.answer` |
 | Hợp thành Conversation ◆ Message | `cascade = ALL, orphanRemoval = true` + `ON DELETE CASCADE` |
 | `User.login`, `User.assignRole` | Phương thức trên entity `User` |
 | `Conversation.ask(q): Message` | `Conversation.ask`, gọi từ `ChatService.ask` |
 | `Question.getAnswer`, `getSource` | Getter trên entity `Question` |
 | `Topic.getQuestions`, `addQuestion` | Phương thức trên entity `Topic` |
 | `Document.upload`, `remove` | `DocumentService.upload`, `DocumentService.remove` (cần lưu / xóa tệp) |
-| BR01–BR06 | Mục 4 |
+| BR01–BR08 | Mục 4 |

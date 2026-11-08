@@ -7,9 +7,11 @@ trong LAN cũng gọi đúng mà không vướng CORS.
 | Trang | Vai | Use case |
 |---|---|---|
 | `/login` | mọi vai | UC01 |
-| `/chat` | mọi vai | UC05 chọn chủ đề → câu hỏi, UC06 lịch sử, UC08 mở nguồn đúng trang |
+| `/chat` | mọi vai | UC05 chọn chủ đề → câu hỏi, UC24 gõ câu hỏi, UC25 gửi giáo vụ, UC06 lịch sử, UC08 mở nguồn đúng trang |
+| `/inquiries` | mọi vai | UC26 câu hỏi đã gửi và câu trả lời của giáo vụ |
 | `/documents` | mọi vai đọc; giáo vụ tải lên, đổi tên, gỡ | UC07, UC08, UC10–UC12 |
 | `/content` | giáo vụ, quản trị viên | UC22 chủ đề, UC23 câu hỏi – câu trả lời |
+| `/inbox` | giáo vụ, quản trị viên | UC27 trả lời câu hỏi sinh viên gửi, lưu thành câu hỏi có sẵn |
 | `/admin/users`, `/admin/health`, `/admin/permissions` | quản trị viên | UC14–UC16, UC20 |
 
 ## Chạy khi phát triển

@@ -1,6 +1,6 @@
 # Đặc tả yêu cầu phần mềm (SRS) — Sổ Tay Sinh Viên CNTT
 
-**Phiên bản:** 2.0 · 07/11/2026
+**Phiên bản:** 2.1 · 08/11/2026
 **Học phần:** Lập trình mạng máy tính — Trường Đại học Kiến trúc Đà Nẵng
 **Tài liệu liên quan:** [`DAC-TA-TRIEN-KHAI.md`](DAC-TA-TRIEN-KHAI.md) (lược đồ CSDL, API, hướng dẫn
 Spring Boot), [`slides/SRS-tac-nhan-va-use-case.pptx`](slides/SRS-tac-nhan-va-use-case.pptx) (biểu đồ
@@ -10,6 +10,7 @@ use case, luồng), slide Chương 3 (BFD, IFD, DFD, ERD, biểu đồ lớp).
 |---|---|---|
 | 1.0 | 09/2026 | Bản RAG: hỏi đáp tự do, sinh câu trả lời bằng Gemini |
 | 2.0 | 07/11/2026 | Chatbot dạng nút chọn, câu trả lời soạn sẵn, bỏ AI; đơn vị và vai trò lưu trên tài khoản |
+| 2.1 | 08/11/2026 | Sinh viên gõ được câu hỏi: hệ thống tìm câu soạn sẵn khớp nhất; không khớp thì gửi giáo vụ trả lời (UC24–UC27) |
 
 ---
 
@@ -26,19 +27,26 @@ giảng viên hướng dẫn, giáo vụ khoa CNTT.
 Hệ thống web theo mô hình **client–server** giúp sinh viên ngành CNTT tra cứu quy định và quá trình
 học tập: đăng ký học phần, điều kiện đồ án, chuẩn đầu ra, bảo lưu, cảnh báo học vụ, xét tốt nghiệp.
 
-Sinh viên dùng một **chatbot dạng nút chọn**: chọn chủ đề → chọn câu hỏi → nhận câu trả lời do giáo vụ
-soạn sẵn, kèm tài liệu nguồn và số trang để tự kiểm chứng.
+Sinh viên hỏi qua một **chatbot**, theo hai cách:
+
+- **Bấm nút:** chọn chủ đề → chọn câu hỏi có sẵn → nhận câu trả lời do giáo vụ soạn, kèm tài liệu nguồn và
+  số trang để tự kiểm chứng.
+- **Gõ câu hỏi:** hệ thống tìm câu hỏi soạn sẵn khớp nhất theo từ khóa. Khớp rõ thì trả lời ngay; khớp
+  vừa thì gợi ý vài câu gần nhất; không khớp thì sinh viên gửi câu hỏi cho giáo vụ, giáo vụ trả lời sau.
+
+Mọi câu trả lời đều do giáo vụ viết; hệ thống **không dùng AI** để sinh nội dung.
 
 **Thuộc phạm vi**
 
-- Hỏi đáp qua nút câu hỏi có sẵn, kèm nguồn; xem lại hội thoại cá nhân.
+- Hỏi đáp qua nút câu hỏi có sẵn hoặc gõ câu hỏi, kèm nguồn; xem lại hội thoại cá nhân.
+- Gửi câu hỏi chưa có câu trả lời cho giáo vụ; giáo vụ trả lời qua hộp thư.
 - Kho tài liệu (PDF/DOCX) làm nguồn trích dẫn; giáo vụ soạn chủ đề và câu hỏi – câu trả lời.
 - Quản lý trạng thái và vai trò tài khoản thuộc khoa CNTT.
 - Kiểm tra trạng thái hệ thống; chạy trong mạng LAN để thực hành TCP/HTTP.
 
 **Ngoài phạm vi**
 
-- Trả lời câu hỏi gõ tự do; dùng AI / mô hình ngôn ngữ.
+- Dùng AI / mô hình ngôn ngữ để tự sinh câu trả lời; hiểu ngữ nghĩa câu hỏi ngoài so khớp từ khóa.
 - Tra cứu điểm, công nợ học phí, lịch học, hồ sơ cá nhân; đăng ký tín chỉ.
 - Quản trị nhiều khoa; tự đăng ký tài khoản; đăng nhập SSO; OCR tài liệu scan.
 
@@ -50,7 +58,9 @@ soạn sẵn, kèm tài liệu nguồn và số trang để tự kiểm chứng.
 | Câu hỏi (Question) | Một nút câu hỏi có sẵn, gắn câu trả lời soạn sẵn và một nguồn |
 | Nguồn | Tài liệu gốc và số trang chứa căn cứ của câu trả lời |
 | Hội thoại (Conversation) | Chuỗi các lượt chọn câu hỏi của một sinh viên |
-| Tin nhắn (Message) | Một lượt chọn câu hỏi trong hội thoại |
+| Tin nhắn (Message) | Một lượt hỏi – đáp trong hội thoại: câu hỏi soạn sẵn được chọn (bấm nút hoặc khớp từ câu gõ) |
+| Câu hỏi gửi giáo vụ (Inquiry) | Câu sinh viên gõ mà không khớp câu soạn sẵn nào, chờ giáo vụ trả lời |
+| So khớp từ khóa | Bỏ dấu, bỏ từ hư ("là", "gì", "bao nhiêu"…), chấm điểm theo số từ khóa trùng giữa câu gõ và câu hỏi soạn sẵn |
 | Ẩn câu hỏi | Gỡ câu hỏi khỏi danh sách nút nhưng giữ lại để lịch sử còn đọc được |
 | JWT | JSON Web Token — mã xác thực client gửi kèm mỗi request |
 | UC, BR, NFR | Use case, quy tắc nghiệp vụ (business rule), yêu cầu phi chức năng |
@@ -82,8 +92,8 @@ khoa CNTT; hệ thống không tự sinh nội dung.
 | Module | Chức năng |
 |---|---|
 | M1 · Tài khoản | Đăng nhập, đăng xuất, xem thông tin cá nhân, đổi mật khẩu |
-| M2 · Hỏi đáp | Chọn câu hỏi và nhận câu trả lời kèm nguồn, xem lại hội thoại, mở nguồn |
-| M3 · Nội dung | Tra cứu tài liệu; giáo vụ quản lý tài liệu, chủ đề, câu hỏi – câu trả lời |
+| M2 · Hỏi đáp | Chọn hoặc gõ câu hỏi và nhận câu trả lời kèm nguồn; gửi câu hỏi cho giáo vụ và xem câu trả lời; xem lại hội thoại, mở nguồn |
+| M3 · Nội dung | Tra cứu tài liệu; giáo vụ quản lý tài liệu, chủ đề, câu hỏi – câu trả lời, trả lời câu hỏi sinh viên gửi |
 | M4 · Quản trị | Tra cứu, khóa / mở, phân quyền tài khoản; kiểm tra trạng thái hệ thống |
 
 ### 2.3. Tác nhân và người dùng
@@ -183,6 +193,36 @@ API tương ứng ghi ở [`DAC-TA-TRIEN-KHAI.md`](DAC-TA-TRIEN-KHAI.md) mục 6
 - **Ngoại lệ:** 2a. Hội thoại của người khác → báo không tìm thấy (BR05).
 - **Ghi chú:** câu hỏi đã ẩn vẫn hiển thị trong lịch sử; nội dung là bản hiện hành của câu trả lời.
 
+**UC24 — Gõ câu hỏi**
+
+- **Tác nhân:** Sinh viên (Giáo vụ, Quản trị viên kế thừa).
+- **Luồng chính:**
+  1. Sinh viên gõ câu hỏi (3–500 ký tự) vào ô nhập của khung chat.
+  2. Hệ thống chuẩn hóa câu gõ (chữ thường, bỏ dấu, bỏ từ hư) và chấm điểm với mọi câu hỏi đang hiện.
+  3. Câu điểm cao nhất đạt ngưỡng khớp rõ và hơn hẳn câu thứ hai → hệ thống trả lời bằng câu trả lời soạn
+     sẵn của câu đó, ghi rõ "câu hỏi có sẵn gần nhất", kèm nguồn; lưu tin nhắn cùng câu đã gõ.
+  4. Client hiện thêm tối đa 2 câu hỏi liên quan để sinh viên bấm tiếp.
+- **Thay thế:**
+  - 3a. Có câu đạt ngưỡng gợi ý nhưng chưa khớp rõ → hiện "Có phải bạn muốn hỏi:" với tối đa 3 nút; sinh
+    viên bấm một nút → như UC05 bước 3; hoặc chọn gửi giáo vụ → UC25. Không lưu tin nhắn.
+  - 3b. Không câu nào đạt ngưỡng gợi ý → báo "Chưa có câu trả lời soạn sẵn", mời gửi giáo vụ → UC25.
+- **Ngoại lệ:** 1a. Ít hơn 3 ký tự → báo lỗi, không gửi.
+- **Hậu điều kiện:** 3 → có thêm một tin nhắn trong hội thoại; 3a, 3b → dữ liệu không đổi.
+
+**UC25 — Gửi câu hỏi cho giáo vụ**
+
+- **Tác nhân:** Sinh viên.
+- **Tiền điều kiện:** vừa gõ câu hỏi ở UC24 mà không được trả lời.
+- **Luồng chính:** sinh viên bấm "Gửi câu hỏi cho giáo vụ"; hệ thống lưu câu hỏi ở trạng thái **Chờ trả lời**
+  và báo đã gửi.
+- **Ngoại lệ:** đang có 5 câu chờ trả lời → từ chối, đề nghị đợi (BR08).
+
+**UC26 — Xem câu trả lời của giáo vụ**
+
+- **Tác nhân:** Sinh viên.
+- **Luồng chính:** hệ thống trả các câu đã gửi của chính người gọi, mới nhất trước, kèm trạng thái; câu đã
+  trả lời có nội dung trả lời và nguồn (nếu có); sinh viên mở nguồn như UC08.
+
 **UC08 — Xem nguồn trích dẫn**
 
 - **Luồng chính:** người dùng bấm nguồn của một câu trả lời; hệ thống trả tệp gốc; client mở PDF tại đúng trang được dẫn (DOCX: mở / tải về).
@@ -231,6 +271,19 @@ API tương ứng ghi ở [`DAC-TA-TRIEN-KHAI.md`](DAC-TA-TRIEN-KHAI.md) mục 6
 - **Thay thế:** 2a. Ẩn câu hỏi → câu hỏi không còn hiện thành nút, lịch sử vẫn giữ; 2b. hiện lại câu hỏi đã ẩn.
 - **Ngoại lệ:** 3a. Dữ liệu không hợp lệ → báo lỗi từng trường, giáo vụ sửa và gửi lại.
 
+**UC27 — Trả lời câu hỏi của sinh viên**
+
+- **Tác nhân:** Giáo vụ (Quản trị viên kế thừa).
+- **Luồng chính:**
+  1. Giáo vụ mở hộp thư; hệ thống trả các câu **Chờ trả lời**, câu chờ lâu nhất trước, kèm tên và mã sinh viên.
+  2. Giáo vụ viết câu trả lời (≤ 5000 ký tự), chọn tài liệu nguồn và số trang (khuyến khích, không bắt buộc).
+  3. Hệ thống kiểm tra số trang, lưu câu trả lời, chuyển trạng thái **Đã trả lời**.
+- **Thay thế:**
+  - 2a. Giáo vụ chọn "Lưu thành câu hỏi có sẵn": chọn chủ đề, sửa chữ trên nút; bắt buộc có nguồn; hệ thống
+    tạo thêm câu hỏi như UC23 — lần sau sinh viên gõ câu tương tự sẽ được trả lời ngay.
+  - 2b. Sửa câu trả lời đã gửi: mở câu ở mục "Đã trả lời", sửa và gửi lại.
+- **Ngoại lệ:** số trang không hợp lệ hoặc thiếu nội dung → báo lỗi, không lưu.
+
 ### 3.4. M4 · Quản trị
 
 **UC14 — Tra cứu người dùng**
@@ -267,7 +320,7 @@ API tương ứng ghi ở [`DAC-TA-TRIEN-KHAI.md`](DAC-TA-TRIEN-KHAI.md) mục 6
 
 ## 4. Yêu cầu dữ liệu
 
-Sáu thực thể, khớp ERD và biểu đồ lớp Chương 3. Lược đồ chi tiết: `DAC-TA-TRIEN-KHAI.md` mục 5.
+Bảy thực thể, khớp ERD và biểu đồ lớp Chương 3. Lược đồ chi tiết: `DAC-TA-TRIEN-KHAI.md` mục 5.
 
 | Thực thể | Bảng | Thuộc tính chính | Ràng buộc |
 |---|---|---|---|
@@ -276,10 +329,12 @@ Sáu thực thể, khớp ERD và biểu đồ lớp Chương 3. Lược đồ c
 | Câu hỏi | `questions` | chủ đề, nội dung nút, câu trả lời, tài liệu nguồn, trang, đang hiện, thứ tự | Thuộc đúng một chủ đề; dẫn tới đúng một tài liệu; trang ≥ 1 |
 | Tài liệu | `documents` | tiêu đề, đường dẫn tệp, mã băm, loại tệp, số trang, người tải lên | Mã băm duy nhất |
 | Hội thoại | `conversations` | người tạo, tiêu đề, thời điểm tạo | Thuộc đúng một tài khoản |
-| Tin nhắn | `messages` | hội thoại, câu hỏi được chọn, thời điểm | Xóa hội thoại thì xóa tin nhắn |
+| Tin nhắn | `messages` | hội thoại, câu hỏi được chọn, câu đã gõ (nếu có), thời điểm | Xóa hội thoại thì xóa tin nhắn |
+| Câu hỏi gửi giáo vụ | `inquiries` | người gửi, nội dung, trạng thái, câu trả lời, tài liệu nguồn, trang, người trả lời, thời điểm gửi / trả lời | Trạng thái ∈ {Chờ trả lời, Đã trả lời}; đã trả lời thì phải có câu trả lời; có tài liệu thì phải có trang |
 
 Quan hệ: Tài khoản 1–n Hội thoại; Hội thoại 1–n Tin nhắn; Câu hỏi 1–n Tin nhắn; Chủ đề 1–n Câu hỏi;
-Tài liệu 1–n Câu hỏi; Tài khoản 1–n Tài liệu (người tải lên).
+Tài liệu 1–n Câu hỏi; Tài khoản 1–n Tài liệu (người tải lên); Tài khoản 1–n Câu hỏi gửi giáo vụ (người
+gửi); Tài liệu 1–n Câu hỏi gửi giáo vụ (nguồn của câu trả lời, có thể không có).
 
 **Lưu giữ:** câu hỏi không bị xóa vĩnh viễn (chỉ ẩn); hội thoại giữ đến khi tài khoản bị xóa khỏi CSDL;
 tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục tệp hằng tuần.
@@ -292,7 +347,9 @@ tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục t�
 
 - UI-1. Trang đăng nhập; sau đăng nhập có thanh điều hướng theo vai.
 - UI-2. **Khung chat:** hàng nút chủ đề → hàng nút câu hỏi → bong bóng câu trả lời có nhãn nguồn
-  "Tên tài liệu · trang N"; bấm nhãn mở tệp gốc. Luôn có nút "Chọn chủ đề khác".
+  "Tên tài liệu · trang N"; bấm nhãn mở tệp gốc. Luôn có nút "Chọn chủ đề khác" và ô "Hoặc gõ câu hỏi
+  của bạn"; câu gõ không khớp hiện nút "Gửi câu hỏi cho giáo vụ".
+- UI-2b. Trang "Câu hỏi đã gửi" của sinh viên; trang "Hộp thư" của giáo vụ với hai mục Chờ trả lời / Đã trả lời.
 - UI-3. Danh sách hội thoại bên trái (máy tính) hoặc trong menu (điện thoại).
 - UI-4. Trang giáo vụ: bảng tài liệu (tải lên, sửa tiêu đề, gỡ), danh sách chủ đề kéo thả thứ tự, biểu
   mẫu câu hỏi chọn tài liệu nguồn từ danh sách và nhập số trang.
@@ -326,6 +383,7 @@ tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục t�
 | NFR-06 | Tương thích | Chrome, Edge, Firefox bản hiện hành; Java 21; PostgreSQL 16 | Kiểm thử thủ công |
 | NFR-07 | Triển khai | Chạy toàn bộ bằng một lệnh `docker compose up` trong LAN không có Internet | Thử trên máy phòng lab |
 | NFR-08 | Tin cậy | Có trang trạng thái hệ thống (UC20); lỗi CSDL không làm server dừng | Kịch bản 14 |
+| NFR-09 | Chất lượng so khớp | Gõ không dấu cho cùng kết quả với có dấu; "kỳ" và "kì" như nhau; câu gõ gần nguyên văn câu hỏi soạn sẵn phải được trả lời ngay | Kiểm thử đơn vị `QuestionMatcherTest`, kịch bản UC24 |
 
 ---
 
@@ -338,16 +396,20 @@ tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục t�
 | BR03 | Sinh viên chỉ đọc; giáo vụ và quản trị viên mới ghi nội dung; chỉ quản trị viên đổi tài khoản. |
 | BR04 | Quản trị viên không tự khóa hay tự hạ vai của chính mình. |
 | BR05 | Hội thoại thuộc riêng người tạo; mở nguồn và tệp gốc phải đăng nhập. |
-| BR06 | Chatbot chỉ trả lời các câu hỏi có sẵn; mỗi câu trả lời soạn sẵn phải gắn tài liệu nguồn và số trang. |
+| BR06 | Mỗi câu hỏi soạn sẵn phải gắn tài liệu nguồn và số trang. |
+| BR07 | Hệ thống không tự sinh câu trả lời: câu gõ chỉ được trả lời bằng câu soạn sẵn khớp, hoặc do giáo vụ viết. |
+| BR08 | Mỗi sinh viên có tối đa 5 câu hỏi đang chờ giáo vụ trả lời. |
 
 ### Ma trận quyền
 
 | Chức năng | Sinh viên | Giáo vụ | Quản trị viên |
 |---|---|---|---|
 | Đăng nhập / đăng xuất, đổi mật khẩu | Có | Có | Có |
-| Chọn câu hỏi, xem hội thoại của mình | Có | Có | Có |
+| Chọn hoặc gõ câu hỏi, xem hội thoại của mình | Có | Có | Có |
+| Gửi câu hỏi cho giáo vụ, xem câu trả lời | Có | Có | Có |
 | Đọc tài liệu, mở tệp gốc | Có | Có | Có |
 | Quản lý tài liệu, chủ đề, câu hỏi – câu trả lời | — | Có | Có |
+| Trả lời câu hỏi sinh viên gửi | — | Có | Có |
 | Xem, khóa / mở, phân quyền tài khoản | — | — | Có |
 | Kiểm tra trạng thái hệ thống | — | — | Có |
 | Tự khóa hoặc tự hạ vai của chính mình | — | — | — |
@@ -364,12 +426,16 @@ tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục t�
 | UC04 Đổi mật khẩu | M1 | `PUT /api/auth/password` | users | BR02 |
 | UC05 Chọn câu hỏi, nhận trả lời | M2 | `GET /api/topics`, `GET /api/topics/{id}/questions`, `POST /api/chat` | topics, questions, documents, conversations, messages | BR05, BR06 |
 | UC06 Xem lại hội thoại | M2 | `GET /api/conversations`, `GET /api/conversations/{id}` | conversations, messages, questions | BR05 |
+| UC24 Gõ câu hỏi | M2 | `POST /api/chat/typed` | questions, conversations, messages | BR07 |
+| UC25 Gửi câu hỏi cho giáo vụ | M2 | `POST /api/inquiries` | inquiries | BR08 |
+| UC26 Xem câu trả lời của giáo vụ | M2 | `GET /api/inquiries/mine` | inquiries, documents | BR05 |
 | UC08 Xem nguồn trích dẫn | M2 | `GET /api/documents/{id}/file` | documents | BR05 |
 | UC07 Tra cứu kho tài liệu | M3 | `GET /api/documents` | documents | — |
 | UC10 Tải lên tài liệu | M3 | `POST /api/documents` | documents | BR03 |
 | UC11 Sửa thông tin tài liệu | M3 | `PATCH /api/documents/{id}` | documents | BR03 |
 | UC12 Gỡ tài liệu | M3 | `DELETE /api/documents/{id}` | documents, questions | BR03, BR06 |
 | UC22 Quản lý chủ đề | M3 | `POST/PATCH/DELETE /api/topics` | topics | BR03 |
+| UC27 Trả lời câu hỏi của sinh viên | M3 | `GET /api/inquiries`, `POST /api/inquiries/{id}/answer` | inquiries, questions | BR03, BR07 |
 | UC23 Quản lý câu hỏi – câu trả lời | M3 | `GET /api/admin/questions`, `POST/PATCH/DELETE /api/questions` | questions | BR03, BR06 |
 | UC14 Tra cứu người dùng | M4 | `GET /api/users` | users | BR03 |
 | UC15 Khóa / mở tài khoản | M4 | `PATCH /api/users/{id}` | users | BR02, BR04 |

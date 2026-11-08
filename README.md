@@ -3,9 +3,10 @@
 Hệ thống tra cứu quy định học vụ cho sinh viên **ngành Công nghệ Thông tin — Trường Đại học Kiến trúc
 Đà Nẵng**. Đồ án học phần **Lập trình mạng máy tính**, xây dựng theo mô hình **client–server**.
 
-Sinh viên dùng một **chatbot dạng nút chọn**: chọn chủ đề → chọn câu hỏi → nhận câu trả lời do giáo vụ
-khoa soạn sẵn, kèm **tài liệu nguồn và số trang** để tự kiểm chứng. Hệ thống không dùng AI và không nhận
-câu hỏi gõ tự do — câu trả lời luôn đúng nội dung giáo vụ đã duyệt.
+Sinh viên hỏi qua một **chatbot**: bấm **nút chủ đề → nút câu hỏi có sẵn**, hoặc **gõ câu hỏi**. Câu gõ được
+so khớp từ khóa với bộ câu hỏi soạn sẵn — khớp thì trả lời ngay, gần khớp thì gợi ý, không khớp thì sinh viên
+**gửi câu hỏi cho giáo vụ** và nhận câu trả lời sau. Mọi câu trả lời do giáo vụ khoa viết, kèm **tài liệu nguồn
+và số trang** để tự kiểm chứng; hệ thống không dùng AI.
 
 ![Khung chat](docs/images/chat.png)
 
@@ -13,22 +14,24 @@ câu hỏi gõ tự do — câu trả lời luôn đúng nội dung giáo vụ �
 
 | Vai | Làm được gì |
 |---|---|
-| **Sinh viên** (`USER`) | Chọn chủ đề và câu hỏi, nhận câu trả lời kèm nguồn; mở tệp gốc đúng trang; xem lại hội thoại; tra cứu kho tài liệu |
-| **Giáo vụ khoa** (`CONTENT_ADMIN`) | Mọi quyền của sinh viên + tải lên / đổi tên / gỡ tài liệu; tạo chủ đề; soạn câu hỏi – câu trả lời và gắn nguồn |
+| **Sinh viên** (`USER`) | Chọn hoặc gõ câu hỏi, nhận câu trả lời kèm nguồn; gửi câu hỏi chưa có câu trả lời cho giáo vụ; mở tệp gốc đúng trang; xem lại hội thoại; tra cứu kho tài liệu |
+| **Giáo vụ khoa** (`CONTENT_ADMIN`) | Mọi quyền của sinh viên + tải lên / đổi tên / gỡ tài liệu; tạo chủ đề; soạn câu hỏi – câu trả lời và gắn nguồn; trả lời câu hỏi sinh viên gửi qua hộp thư |
 | **Quản trị viên** (`SYSTEM_ADMIN`) | Mọi quyền của giáo vụ + tra cứu, khóa / mở, phân quyền tài khoản; kiểm tra trạng thái hệ thống |
 
 Quy tắc chính: mỗi request đọc lại vai từ CSDL nên khóa tài khoản hay đổi vai có hiệu lực ngay; quản trị
 viên không tự khóa hay tự hạ vai; mỗi câu trả lời bắt buộc có tài liệu nguồn.
 
-| Soạn nội dung (giáo vụ) | Quản trị tài khoản |
+| Gõ câu hỏi: gợi ý hoặc gửi giáo vụ | Hộp thư của giáo vụ |
 |---|---|
+| ![Gõ câu hỏi](docs/images/chat-go-cau-hoi.png) | ![Hộp thư](docs/images/hop-thu.png) |
+| **Soạn nội dung (giáo vụ)** | **Quản trị tài khoản** |
 | ![Nội dung](docs/images/noi-dung.png) | ![Quản trị](docs/images/quan-tri.png) |
 
 ## Kiến trúc
 
 ```
  Trình duyệt ──HTTP──▶  web (Next.js, :3000)  ──/api/* ──▶  server-java (Spring Boot, :8080)  ──JDBC──▶  PostgreSQL 16
- (máy bất kỳ trong LAN)    giao diện                         REST API JSON, JWT                         6 bảng
+ (máy bất kỳ trong LAN)    giao diện                         REST API JSON, JWT                         7 bảng
                                                              + thư mục lưu tệp PDF / DOCX
 ```
 
@@ -36,7 +39,7 @@ viên không tự khóa hay tự hạ vai; mỗi câu trả lời bắt buộc c
   trong LAN mở `http://<IP máy chủ>:3000` cũng dùng được, không vướng CORS.
 - **Server:** REST API, mỗi thao tác là một cặp request / response JSON. Xác thực bằng JWT (header
   `Authorization: Bearer`), mật khẩu băm BCrypt.
-- **CSDL:** 6 bảng — `users`, `topics`, `questions`, `documents`, `conversations`, `messages` — quản lý
+- **CSDL:** 7 bảng — `users`, `topics`, `questions`, `documents`, `conversations`, `messages`, `inquiries` — quản lý
   bằng Flyway.
 
 | Thành phần | Công nghệ |
@@ -100,7 +103,7 @@ Chi tiết biến môi trường: [`server-java/README.md`](server-java/README.m
 ## Kiểm thử
 
 ```bash
-# Server: 15 kiểm thử tích hợp trên PostgreSQL thật (cần database tangthu_test)
+# Server: 19 kiểm thử tích hợp trên PostgreSQL thật + 2 kiểm thử đơn vị (cần database tangthu_test)
 createdb -O tangthu tangthu_test
 cd server-java && mvn test
 
@@ -120,7 +123,7 @@ hỏi, câu hỏi đã ẩn, hội thoại của người khác, tải trùng t�
 │   └── src/main/java/vn/tangthu/
 │       ├── common/              JWT, phân quyền, xử lý lỗi, lưu tệp
 │       ├── account/             M1 · Tài khoản      UC01–UC04
-│       ├── chat/                M2 · Hỏi đáp        UC05, UC06
+│       ├── chat/                M2 · Hỏi đáp        UC05, UC06, UC24–UC27
 │       ├── content/             M3 · Nội dung       UC07, UC08, UC10–UC12, UC22, UC23
 │       └── admin/               M4 · Quản trị       UC14–UC16, UC20
 ├── web/                         Web client Next.js
@@ -134,7 +137,7 @@ hỏi, câu hỏi đã ẩn, hội thoại của người khác, tải trùng t�
 
 | Tệp | Nội dung |
 |---|---|
-| [`docs/SRS.md`](docs/SRS.md) | Đặc tả yêu cầu phần mềm: phạm vi, tác nhân, 17 use case, yêu cầu dữ liệu, giao diện, phi chức năng, quy tắc nghiệp vụ, ma trận truy vết |
+| [`docs/SRS.md`](docs/SRS.md) | Đặc tả yêu cầu phần mềm: phạm vi, tác nhân, 21 use case, yêu cầu dữ liệu, giao diện, phi chức năng, quy tắc nghiệp vụ, ma trận truy vết |
 | [`docs/DAC-TA-TRIEN-KHAI.md`](docs/DAC-TA-TRIEN-KHAI.md) | Đặc tả triển khai: lược đồ CSDL, API REST, luồng xử lý, hướng dẫn Spring Boot, kịch bản kiểm thử |
 | [`docs/slides/SRS-tac-nhan-va-use-case.pptx`](docs/slides/SRS-tac-nhan-va-use-case.pptx) | Slide SRS: tác nhân, use case, ma trận quyền, input / output, luồng |
 

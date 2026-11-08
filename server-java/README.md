@@ -8,11 +8,11 @@ Hiện thực theo [`docs/DAC-TA-TRIEN-KHAI.md`](../docs/DAC-TA-TRIEN-KHAI.md) v
 src/main/java/vn/tangthu/
 ├── common/    cấu hình, JWT, bảo mật, xử lý lỗi, lưu tệp
 ├── account/   M1 · Tài khoản      — UC01–UC04
-├── chat/      M2 · Hỏi đáp        — UC05, UC06
+├── chat/      M2 · Hỏi đáp        — UC05, UC06, UC24–UC27
 ├── content/   M3 · Nội dung       — UC07, UC08, UC10–UC12, UC22, UC23
 └── admin/     M4 · Quản trị       — UC14–UC16, UC20
 src/main/resources/db/
-├── migration/ V1__init.sql — lược đồ 6 bảng
+├── migration/ V1__init.sql — 6 bảng; V3__typed_questions.sql — inquiries, typed_text
 └── demo/      V2__demo_data.sql — 3 tài khoản demo, 6 chủ đề
 ```
 
@@ -68,7 +68,7 @@ curl -s -X POST localhost:8080/api/documents -H "Authorization: Bearer $TOKEN" \
 
 ## Kiểm thử
 
-Kiểm thử tích hợp (`ApiIntegrationTest`, 15 ca theo mục 9 của đặc tả) chạy trên PostgreSQL thật:
+Kiểm thử tích hợp (`ApiIntegrationTest`, 19 ca theo mục 9 của đặc tả) và kiểm thử đơn vị bộ so khớp (`QuestionMatcherTest`) chạy trên PostgreSQL thật:
 
 ```bash
 # CSDL riêng cho test, sẽ bị xóa dữ liệu mỗi ca
