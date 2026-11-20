@@ -69,8 +69,8 @@ Mật khẩu chung: `Matkhau@123`
 | `GV001` | Giáo vụ khoa |
 | `QTV001` | Quản trị viên |
 
-Dữ liệu demo có sẵn 6 chủ đề nhưng chưa có câu hỏi. Đăng nhập `GV001` → **Tài liệu** tải một tệp PDF lên →
-**Nội dung** soạn câu hỏi và gắn trang nguồn → đăng nhập `SV001` để hỏi.
+Dữ liệu demo tự khởi tạo khi chạy ứng dụng với cấu hình mặc định. Đăng nhập `SV001` → **Hỏi đáp**
+để thử 12 câu hỏi mẫu thuộc 6 chủ đề. Mỗi câu trả lời dẫn đến một trang trong PDF **[DEMO] Sổ tay học vụ mẫu**.
 
 > Khi triển khai thật: đặt `FLYWAY_LOCATIONS=classpath:db/migration` trong `.env` để **không** tạo tài khoản
 > demo, và đổi `JWT_SECRET`, `DB_PASSWORD`.
