@@ -1,0 +1,6 @@
+# Intermediate report builds and visual checks
+.report-work/
+
+# Editor backups and Office lock files
+*.bkp
+~$*
