@@ -394,32 +394,50 @@ Có hiệu lực ngay request kế tiếp của người bị sửa (BR02).
 ### 8.1. Cấu trúc dự án
 
 ```
-server-java/
+server/
 ├── pom.xml
 ├── Dockerfile
 └── src/main/
     ├── java/vn/tangthu/
     │   ├── TangThuApplication.java
-    │   ├── controller/        # AuthController (M1), ChatController (M2), TopicController,
-    │   │                      # QuestionController, DocumentController (M3), AdminController, HealthController (M4)
-    │   ├── service/           # AuthService, ChatService, TopicService, QuestionService,
-    │   │                      # DocumentService, AdminService
-    │   ├── repository/        # UserRepository, TopicRepository, QuestionRepository, DocumentRepository,
-    │   │                      # ConversationRepository, MessageRepository
-    │   ├── model/             # @Entity: User, Topic, Question, Document, Conversation, Message; enum Role
-    │   ├── dto/               # UserDto, ContentDtos, ChatDtos, PageResponse, ErrorResponse, *Request
-    │   ├── config/            # SecurityConfig, AppProperties
-    │   ├── security/          # JwtService, JwtAuthFilter, AuthUser
-    │   ├── exception/         # ApiException, GlobalExceptionHandler
-    │   └── util/              # FileStorage
+    │   ├── common/                    # dùng chung, không thuộc module nào
+    │   │   ├── config/                # SecurityConfig, AppProperties
+    │   │   ├── security/              # JwtService, JwtAuthFilter, AuthUser
+    │   │   ├── exception/             # ApiException, GlobalExceptionHandler
+    │   │   ├── dto/                   # ErrorResponse, PageResponse
+    │   │   └── util/                  # FileStorage
+    │   ├── account/                   # M1 · Tài khoản — UC01–UC04
+    │   │   ├── model/                 # User, Role
+    │   │   ├── repository/            # UserRepository
+    │   │   ├── service/               # AuthService
+    │   │   ├── controller/            # AuthController
+    │   │   └── dto/                   # LoginRequest, ChangePasswordRequest, UserDto
+    │   ├── chat/                      # M2 · Hỏi đáp — UC05, UC06
+    │   │   ├── model/                 # Conversation, Message
+    │   │   ├── repository/            # ConversationRepository, MessageRepository
+    │   │   ├── service/               # ChatService
+    │   │   ├── controller/            # ChatController
+    │   │   └── dto/                   # AskRequest, ChatDtos
+    │   ├── content/                   # M3 · Nội dung — UC07, UC08, UC10–UC12, UC22, UC23
+    │   │   ├── model/                 # Topic, Question, Document
+    │   │   ├── repository/            # TopicRepository, QuestionRepository, DocumentRepository
+    │   │   ├── service/               # TopicService, QuestionService, DocumentService
+    │   │   ├── controller/            # TopicController, QuestionController, DocumentController
+    │   │   └── dto/                   # ContentDtos, CreateTopic, UpdateTopic, QuestionRequest, RenameRequest
+    │   └── admin/                     # M4 · Quản trị — UC14–UC16, UC20 (dùng model User của M1)
+    │       ├── service/               # AdminService
+    │       ├── controller/            # AdminController, HealthController
+    │       └── dto/                   # UpdateUserRequest, Health
     └── resources/
         ├── application.yml
         └── db/
-            ├── migration/     # V1__init.sql — lược đồ
-            └── demo/          # V2__demo_data.sql — tắt bằng FLYWAY_LOCATIONS khi triển khai thật
+            ├── migration/             # V1__init.sql — lược đồ
+            └── demo/                  # dữ liệu demo — tắt bằng FLYWAY_LOCATIONS khi triển khai thật
 ```
 
-Mỗi package ứng với một module của BFD. Controller chỉ nhận/trả DTO (`record`); entity không lộ ra JSON.
+Chia **theo module trước, theo tầng MVC sau**: mỗi thành viên phụ trách trọn một thư mục module, bên trong
+có đủ Model (`model/` + `repository/`), Controller (`controller/`), nghiệp vụ (`service/`) và dữ liệu
+trao đổi (`dto/`). View là giao diện ở `client/src/modules/<cùng tên module>/`.  Controller chỉ nhận/trả DTO (`record`); entity không lộ ra JSON.
 
 ### 8.2. `pom.xml` — phụ thuộc chính
 
@@ -692,7 +710,7 @@ services:
     environment: { POSTGRES_DB: tangthu, POSTGRES_USER: tangthu, POSTGRES_PASSWORD: ${DB_PASSWORD} }
     volumes: [ "pgdata:/var/lib/postgresql/data" ]
   api:
-    build: ./server-java
+    build: ./server
     environment:
       DATABASE_URL: jdbc:postgresql://db:5432/tangthu
       DB_USER: tangthu
@@ -740,8 +758,8 @@ tài liệu, tạo chủ đề, soạn câu hỏi rồi thấy nút mới phía 
 
 | Thiết kế | Mã nguồn Spring Boot |
 |---|---|
-| Module M1–M4 (BFD) | Mỗi module một nhóm Controller + Service: M1 `Auth*`, M2 `Chat*`, M3 `Topic*` / `Question*` / `Document*`, M4 `Admin*` / `HealthController` |
-| Mô hình MVC | `model/` (Model), `controller/` (Controller), `dto/` → JSON (View phía server; giao diện ở `web/`) |
+| Module M1–M4 (BFD) | Mỗi module một package, trong đó chia tầng MVC: `account` (M1), `chat` (M2), `content` (M3), `admin` (M4); phía client là `client/src/modules/<module>/` |
+| Mô hình MVC | `model/` (Model), `controller/` (Controller), `dto/` → JSON (View phía server; giao diện ở `client/`) |
 | 3 tác nhân (DFD, use case) | `Role` + `RoleHierarchy` |
 | 6 thực thể (ERD) | 6 bảng trong `V1__init.sql` |
 | 6 lớp (biểu đồ lớp) | 6 `@Entity`: `User`, `Topic`, `Question`, `Document`, `Conversation`, `Message` |
