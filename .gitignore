@@ -31,3 +31,6 @@ backup/
 
 # Tệp khóa của Word / PowerPoint khi đang mở
 ~$*
+
+# Bản dựng báo cáo và ảnh kiểm tra nội bộ
+docs/.report-work/

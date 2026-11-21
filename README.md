@@ -69,8 +69,8 @@ Mật khẩu chung: `Matkhau@123`
 | `GV001` | Giáo vụ khoa |
 | `QTV001` | Quản trị viên |
 
-Dữ liệu demo có sẵn 6 chủ đề nhưng chưa có câu hỏi. Đăng nhập `GV001` → **Tài liệu** tải một tệp PDF lên →
-**Nội dung** soạn câu hỏi và gắn trang nguồn → đăng nhập `SV001` để hỏi.
+Dữ liệu demo tự khởi tạo khi chạy ứng dụng với cấu hình mặc định. Đăng nhập `SV001` → **Hỏi đáp**
+để thử 12 câu hỏi mẫu thuộc 6 chủ đề. Mỗi câu trả lời dẫn đến một trang trong PDF **[DEMO] Sổ tay học vụ mẫu**.
 
 > Khi triển khai thật: đặt `FLYWAY_LOCATIONS=classpath:db/migration` trong `.env` để **không** tạo tài khoản
 > demo, và đổi `JWT_SECRET`, `DB_PASSWORD`.
@@ -134,6 +134,8 @@ hỏi, câu hỏi đã ẩn, hội thoại của người khác, tải trùng t�
 
 | Tệp | Nội dung |
 |---|---|
+| [`docs/reports/bao-cao-so-tay-sinh-vien-cntt.docx`](docs/reports/bao-cao-so-tay-sinh-vien-cntt.docx) | Báo cáo phân tích và thiết kế hệ thống |
+| [`docs/diagrams/so-do-he-thong.drawio`](docs/diagrams/so-do-he-thong.drawio) | Bộ sơ đồ hệ thống tổng hợp trong một file nhiều trang |
 | [`docs/SRS.md`](docs/SRS.md) | Đặc tả yêu cầu phần mềm: phạm vi, tác nhân, 17 use case, yêu cầu dữ liệu, giao diện, phi chức năng, quy tắc nghiệp vụ, ma trận truy vết |
 | [`docs/DAC-TA-TRIEN-KHAI.md`](docs/DAC-TA-TRIEN-KHAI.md) | Đặc tả triển khai: lược đồ CSDL, API REST, luồng xử lý, hướng dẫn Spring Boot, kịch bản kiểm thử |
 | [`docs/slides/SRS-tac-nhan-va-use-case.pptx`](docs/slides/SRS-tac-nhan-va-use-case.pptx) | Slide SRS: tác nhân, use case, ma trận quyền, input / output, luồng |

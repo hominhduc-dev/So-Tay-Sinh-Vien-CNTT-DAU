@@ -2,11 +2,13 @@ package vn.tangthu.content;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -50,18 +52,21 @@ public class DocumentService {
         return DocumentDto.of(require(id));
     }
 
-    public record StoredFile(Path path, String mimeType, String downloadName) {}
+    public record StoredFile(Resource resource, String mimeType, String downloadName) {}
 
     /** UC08 */
     @Transactional(readOnly = true)
     public StoredFile file(UUID id) {
         Document d = require(id);
-        Path p = storage.resolve(d.getFileUrl());
-        if (!Files.exists(p)) {
+        String fileUrl = d.getFileUrl();
+        Resource resource = "demo/so-tay-hoc-vu-demo.pdf".equals(fileUrl)
+                ? new ClassPathResource("db/" + fileUrl)
+                : new FileSystemResource(storage.resolve(fileUrl));
+        if (!resource.exists()) {
             throw ApiException.notFound("FILE_NOT_FOUND", "Không tìm thấy tệp gốc.");
         }
         String ext = d.getMimeType().equals(PDF) ? ".pdf" : ".docx";
-        return new StoredFile(p, d.getMimeType(), d.getTitle() + ext);
+        return new StoredFile(resource, d.getMimeType(), d.getTitle() + ext);
     }
 
     /** UC10 — +upload(in file: File): void của lớp Document. */

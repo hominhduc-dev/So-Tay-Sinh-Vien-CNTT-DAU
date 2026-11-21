@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Size;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ContentDisposition;
@@ -67,7 +66,7 @@ public class DocumentController {
                 .contentType(MediaType.parseMediaType(f.mimeType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline()
                         .filename(f.downloadName(), StandardCharsets.UTF_8).build().toString())
-                .body(new FileSystemResource(f.path()));
+                .body(f.resource());
     }
 
     /** UC10 */
