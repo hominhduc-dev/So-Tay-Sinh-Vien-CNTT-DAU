@@ -1,6 +1,6 @@
 # Đặc tả triển khai — Sổ Tay Sinh Viên CNTT (Spring Boot)
 
-**Phiên bản:** 1.0 · 07/11/2026
+**Phiên bản:** 2.0 · 21/11/2026 — client desktop Java Swing, giao tiếp qua TCP socket
 **Nguồn thiết kế:** slide Chương 3 (BFD, IFD, DFD, ERD, biểu đồ lớp, CSDL) và
 `docs/slides/SRS-tac-nhan-va-use-case.pptx`.
 
@@ -27,26 +27,31 @@ nhân, đăng ký tín chỉ, nhiều khoa, SSO, OCR.
 ### 1.2. Kiến trúc client–server
 
 ```
- Trình duyệt (client)  ──HTTP request (JSON, JWT)──▶  Spring Boot server  ──JDBC──▶  PostgreSQL 16
- Sinh viên / Giáo vụ / ◀──HTTP response (JSON/tệp)──  REST API /api/*                 6 bảng
- Quản trị viên                                         + thư mục lưu tệp tài liệu
+ Client Java Swing      ──TCP socket :9090──▶   Server Java (ServerSocket)  ──JDBC──▶  PostgreSQL 16
+ (máy bất kỳ trong LAN)  khung [4 byte độ dài]   Spring Boot không web,                  6 bảng
+ Sinh viên / Giáo vụ /   [JSON UTF-8], JWT       mỗi client một luồng                    + thư mục lưu tệp
+ Quản trị viên          ◀──────────────────────
 ```
 
-- Client chỉ gọi REST API; không truy cập CSDL trực tiếp.
-- Mỗi lượt bấm nút là **một request / một response**. Không SSE, không WebSocket.
-- Client có thể là bất kỳ web app nào (React, Next.js, Thymeleaf…); tài liệu này chỉ quy định server.
+- Client là **ứng dụng desktop Java Swing**, mở một `Socket` tới `ServerSocket` của server; không qua
+  trình duyệt, không HTTP.
+- Mỗi lượt bấm nút là **một khung yêu cầu / một khung phản hồi** trên cùng một kết nối TCP lâu dài.
+- Server phục vụ nhiều client cùng lúc: luồng nhận kết nối + pool luồng xử lý (thread-per-connection).
+- Client không truy cập CSDL trực tiếp; giao thức chi tiết ở mục 6.
 
 ### 1.3. Công nghệ
 
 | Thành phần | Lựa chọn |
 |---|---|
 | Ngôn ngữ | Java 21 |
-| Framework | Spring Boot 3.3.x: Web, Data JPA, Security, Validation, Actuator (tùy chọn) |
+| Server | Spring Boot 3.3.x **không web** (`web-application-type: none`): Data JPA, Validation, Jackson; `java.net.ServerSocket` tự viết |
+| Client | Java 21 Swing + FlatLaf, Jackson; `java.net.Socket` |
+| Giao thức | TCP, khung độ dài 4 byte + JSON UTF-8 (mục 6) |
 | CSDL | PostgreSQL 16, migration bằng Flyway |
-| Xác thực | JWT (thư viện `io.jsonwebtoken:jjwt` 0.12.x), mật khẩu BCrypt |
+| Xác thực | JWT (thư viện `io.jsonwebtoken:jjwt` 0.12.x) gửi trong trường `token`, mật khẩu BCrypt (`spring-security-crypto`) |
 | Đọc số trang PDF | Apache PDFBox 3.x |
 | Build | Maven |
-| Chạy | Docker Compose: `postgres:16` + ứng dụng |
+| Chạy | Docker Compose: `postgres:16` + server; client chạy `java -jar` trên máy người dùng |
 
 ---
 
@@ -105,12 +110,12 @@ Mã đã bỏ, không hiện thực: UC09, UC13, UC18, UC19, UC21.
 
 | Mã | Quy tắc | Hiện thực |
 |---|---|---|
-| BR01 | Tài khoản phải đang hoạt động và thuộc khoa CNTT mới được đăng nhập | Kiểm tra `is_active` và `department = 'CNTT'` khi đăng nhập **và** ở mỗi request |
-| BR02 | Mỗi request kiểm tra lại quyền từ CSDL; đổi vai hoặc khóa có hiệu lực ngay request sau | JWT chỉ chứa `userId`; filter đọc lại `users` ở mỗi request |
-| BR03 | Sinh viên chỉ đọc; giáo vụ và quản trị viên mới ghi nội dung; chỉ quản trị viên đổi tài khoản | `@PreAuthorize` theo vai trên từng endpoint |
-| BR04 | Quản trị viên không tự khóa hay tự hạ vai của chính mình | `AdminService` từ chối khi `targetId == currentUserId` → 400 `SELF_MODIFICATION` |
-| BR05 | Hội thoại thuộc riêng người tạo; mở nguồn và tệp gốc phải đăng nhập | Truy vấn hội thoại luôn kèm `user_id`; không phải chủ → 404 |
-| BR06 | Chatbot chỉ trả lời các câu hỏi có sẵn; mỗi câu trả lời soạn sẵn phải gắn tài liệu nguồn | `POST /api/chat` chỉ nhận `questionId`; `UC23` bắt buộc `documentId` và `page` |
+| BR01 | Tài khoản phải đang hoạt động và thuộc khoa CNTT mới được đăng nhập | Kiểm tra `is_active` và `department = 'CNTT'` khi đăng nhập **và** ở mỗi yêu cầu socket |
+| BR02 | Mỗi yêu cầu kiểm tra lại quyền từ CSDL; đổi vai hoặc khóa có hiệu lực ngay yêu cầu sau | JWT chỉ chứa `userId`; `SocketDispatcher` đọc lại `users` ở mỗi yêu cầu |
+| BR03 | Sinh viên chỉ đọc; giáo vụ và quản trị viên mới ghi nội dung; chỉ quản trị viên đổi tài khoản | Mỗi action khai báo vai tối thiểu (`routes.secured(action, role, …)`); thiếu vai → `FORBIDDEN` |
+| BR04 | Quản trị viên không tự khóa hay tự hạ vai của chính mình | `AdminService` từ chối khi `targetId == currentUserId` → `SELF_MODIFICATION` |
+| BR05 | Hội thoại thuộc riêng người tạo; mở nguồn và tệp gốc phải đăng nhập | Truy vấn hội thoại luôn kèm `user_id`; không phải chủ → `CONVERSATION_NOT_FOUND` |
+| BR06 | Chatbot chỉ trả lời các câu hỏi có sẵn; mỗi câu trả lời soạn sẵn phải gắn tài liệu nguồn | `chat.ask` chỉ nhận `questionId`; `UC23` bắt buộc `documentId` và `page` |
 
 ---
 
@@ -206,153 +211,129 @@ tài liệu nguồn nên nhập qua giao diện giáo vụ (UC10 → UC23) sau k
 
 ---
 
-## 6. API REST
+## 6. Giao thức TCP socket
+
+Client và server trao đổi trực tiếp qua **một kết nối TCP** (`java.net.Socket` ↔ `java.net.ServerSocket`),
+cổng mặc định **9090**. Không dùng HTTP, REST, WebSocket.
 
 ### 6.1. Quy ước chung
 
-- Gốc: `/api`. Dữ liệu JSON UTF-8, trừ tải lên (`multipart/form-data`) và tải tệp (nhị phân).
-- Xác thực: header `Authorization: Bearer <jwt>` cho mọi endpoint trừ `POST /api/auth/login`.
-- Phân trang: `?page=0&size=20` (size ≤ 100); response dạng
-  `{ "items": [...], "page": 0, "size": 20, "total": 57 }`.
-- Lỗi: luôn có dạng
+**Đóng khung (framing).** TCP là luồng byte, không có ranh giới thông điệp, nên mỗi thông điệp được đóng
+khung:
 
-```json
-{ "error": { "code": "QUESTION_NOT_FOUND", "message": "Câu hỏi không còn." } }
+```
+┌──────────────────────────┬─────────────────────────────────────┐
+│ 4 byte: độ dài N         │ N byte: JSON mã hóa UTF-8            │
+│ số nguyên big-endian     │                                     │
+└──────────────────────────┴─────────────────────────────────────┘
 ```
 
-| HTTP | Khi nào |
+Hai phía dùng cùng lớp `FrameCodec` (`DataOutputStream.writeInt` + `write`, `DataInputStream.readInt` +
+`readFully`). Khung dài quá **32 MB** → server trả lỗi `FRAME_TOO_LARGE` rồi đóng kết nối.
+
+**Yêu cầu** (client → server):
+
+```json
+{ "id": 7, "action": "chat.ask", "token": "eyJ…", "data": { "questionId": "…", "conversationId": null } }
+```
+
+**Phản hồi** (server → client), cùng `id` với yêu cầu:
+
+```json
+{ "id": 7, "ok": true,  "data": { … } }
+{ "id": 7, "ok": false, "error": { "code": "QUESTION_NOT_FOUND", "message": "Câu hỏi không còn." } }
+```
+
+- **Một kết nối lâu dài** cho cả phiên: đăng nhập, rồi gửi tiếp nhiều yêu cầu trên cùng socket. Mỗi yêu cầu
+  nhận đúng một phản hồi, theo thứ tự. Đăng xuất (UC02) = client bỏ token và đóng socket.
+- **Xác thực:** trường `token` (JWT nhận từ `auth.login`) gửi kèm mọi action trừ `auth.login`, `system.ping`.
+  Mỗi yêu cầu server đọc lại người dùng từ CSDL (BR01, BR02) nên khóa tài khoản / đổi vai có hiệu lực ngay.
+- **Phân trang:** `data` có `page` (≥ 0), `size` (1–100); kết quả dạng
+  `{ "items": [...], "page": 0, "size": 20, "total": 57 }`.
+- **Tệp nhị phân** đi trong JSON dưới dạng base64 (`contentBase64`), tệp ≤ 20 MB.
+- **Đa luồng:** luồng `socket-acceptor` nhận kết nối; mỗi client được một luồng trong pool cố định
+  (`SOCKET_THREADS`, mặc định 64). Kết nối im lặng quá `SOCKET_IDLE_TIMEOUT` (mặc định 30 phút) bị đóng.
+
+**Mã lỗi**
+
+| Nhóm | Mã |
 |---|---|
-| 400 | Dữ liệu không hợp lệ (`VALIDATION_ERROR`), tự sửa chính mình (`SELF_MODIFICATION`) |
-| 401 | Thiếu / sai token, tài khoản bị khóa hoặc không thuộc CNTT (`UNAUTHORIZED`) |
-| 403 | Đủ đăng nhập nhưng thiếu vai (`FORBIDDEN`) |
-| 404 | Không tồn tại hoặc không thuộc người gọi (`*_NOT_FOUND`) |
-| 409 | Xung đột dữ liệu (`DUPLICATE_DOCUMENT`, `DOCUMENT_IN_USE`, `TOPIC_NOT_EMPTY`) |
-| 413 / 415 | Tệp quá lớn / sai định dạng |
+| Giao thức | `BAD_FRAME` (không phải JSON), `UNKNOWN_ACTION`, `FRAME_TOO_LARGE` |
+| Xác thực, quyền | `UNAUTHORIZED` (thiếu / sai token, tài khoản khóa, không thuộc CNTT), `FORBIDDEN` (thiếu vai), `WRONG_PASSWORD`, `SELF_MODIFICATION` |
+| Dữ liệu | `VALIDATION_ERROR`, `QUESTION_NOT_FOUND`, `CONVERSATION_NOT_FOUND`, `TOPIC_NOT_FOUND`, `DOCUMENT_NOT_FOUND`, `USER_NOT_FOUND` |
+| Xung đột | `DUPLICATE_DOCUMENT`, `DOCUMENT_IN_USE`, `TOPIC_NOT_EMPTY`, `TOPIC_NAME_TAKEN`, `CONFLICT` |
+| Tệp | `UNSUPPORTED_FILE` (không phải PDF / DOCX), `FILE_TOO_LARGE` (> 20 MB) |
+| Khác | `INTERNAL_ERROR` |
+
+**Ví dụ một phiên** (mỗi dòng là một khung):
+
+```
+client ─▶ {"id":1,"action":"auth.login","data":{"login":"SV001","password":"Matkhau@123"}}
+       ◀─ {"id":1,"ok":true,"data":{"token":"eyJ…","user":{"code":"SV001","role":"USER",…}}}
+client ─▶ {"id":2,"action":"topic.list","token":"eyJ…"}
+       ◀─ {"id":2,"ok":true,"data":[{"id":"…","name":"Đăng ký học phần","sortOrder":1,"questionCount":2},…]}
+client ─▶ {"id":3,"action":"chat.ask","token":"eyJ…","data":{"questionId":"…"}}
+       ◀─ {"id":3,"ok":true,"data":{"conversationId":"…","message":{…}}}
+client ─▶ {"id":4,"action":"document.upload","token":"eyJ…","data":{…}}
+       ◀─ {"id":4,"ok":false,"error":{"code":"FORBIDDEN","message":"Không đủ quyền."}}
+```
 
 ### 6.2. M1 · Tài khoản
 
-**UC01 — `POST /api/auth/login`** (công khai)
+| Action | Vai tối thiểu | `data` gửi | `data` trả về |
+|---|---|---|---|
+| `system.ping` | — (công khai) | — | `{ "pong": true }` — đo độ trễ khứ hồi |
+| `auth.login` (UC01) | — (công khai) | `{ "login", "password" }` — login = mã hoặc email | `{ "token", "user" }` |
+| `auth.me` (UC04) | USER | — | `{ "user": { "id", "code", "email", "fullName", "role", "department", "active" } }` |
+| `auth.changePassword` (UC03) | USER | `{ "currentPassword", "newPassword" }` (8–72 ký tự) | `{}`; sai mật khẩu cũ → `WRONG_PASSWORD` |
 
-```json
-// request
-{ "login": "2051220001", "password": "••••••••" }       // login = mã hoặc email, ≤ 255
-// 200
-{ "token": "eyJ...", "user": { "id": "…", "code": "2051220001", "email": "…",
-  "fullName": "Nguyễn Văn A", "role": "USER", "department": "CNTT" } }
-```
-Lỗi: 401 nếu sai thông tin, `is_active = false`, hoặc `department ≠ CNTT` (cùng một thông báo, không
-tiết lộ lý do). Token hết hạn sau 8 giờ.
-
-**UC03 — `GET /api/auth/me`** → 200 `{ "user": {…} }` như trên.
-
-**UC04 — `PUT /api/auth/password`**
-```json
-{ "currentPassword": "…", "newPassword": "…" }           // newPassword 8–72 ký tự
-```
-→ 204. Lỗi 400 nếu mật khẩu hiện tại sai.
+Đăng nhập sai, tài khoản khóa hay `department ≠ CNTT` đều trả `UNAUTHORIZED` cùng một thông báo, không
+tiết lộ lý do. Token hết hạn sau 8 giờ.
 
 ### 6.3. M2 · Hỏi đáp
 
-**`GET /api/topics`** (mọi vai) → 200
-```json
-[ { "id": "…", "name": "Đăng ký học phần", "questionCount": 7 } ]
-```
-Sắp theo `sort_order`; chỉ đếm câu hỏi `is_active`.
+| Action | Vai | `data` gửi | `data` trả về |
+|---|---|---|---|
+| `chat.ask` (UC05) | USER | `{ "questionId", "conversationId"? }` — bỏ `conversationId` = hội thoại mới | `{ "conversationId", "message" }` |
+| `conversation.list` (UC06) | USER | `{ "page", "size" }` | trang `{ "id", "title", "createdAt", "messageCount" }`, mới nhất trước |
+| `conversation.get` (UC06) | USER | `{ "id" }` | `{ "id", "title", "createdAt", "messages": [ message ] }` |
 
-**`GET /api/topics/{id}/questions`** (mọi vai) → 200
-```json
-[ { "id": "…", "content": "Mỗi học kỳ đăng ký tối đa bao nhiêu tín chỉ?" } ]
-```
-Chỉ trả câu hỏi `is_active`, sắp theo `sort_order`. Chủ đề không tồn tại → 404 `TOPIC_NOT_FOUND`.
-Danh sách rỗng → client hiện "Chủ đề chưa có câu hỏi".
-
-**UC05 — `POST /api/chat`** (mọi vai)
-```json
-// request
-{ "questionId": "…", "conversationId": null }            // null = bắt đầu hội thoại mới
-// 201
-{
-  "conversationId": "…",
-  "message": {
-    "id": "…", "sentAt": "2026-11-07T08:15:00Z",
-    "question": { "id": "…", "content": "Mỗi học kỳ đăng ký tối đa bao nhiêu tín chỉ?" },
-    "answer": "Theo Điều 9 Quy chế đào tạo, sinh viên đăng ký tối đa 25 tín chỉ…",
-    "source": { "documentId": "…", "title": "Quy chế đào tạo 2024", "page": 12 }
-  }
-}
-```
-Lỗi: 404 `QUESTION_NOT_FOUND` nếu câu hỏi không tồn tại hoặc đã ẩn; 404 `CONVERSATION_NOT_FOUND`
-nếu hội thoại không thuộc người gọi. Hội thoại mới lấy `title` = nội dung câu hỏi đầu tiên.
-
-**UC06 — `GET /api/conversations`** (của chính mình, phân trang, mới nhất trước)
-```json
-{ "items": [ { "id": "…", "title": "…", "createdAt": "…", "messageCount": 3 } ], … }
-```
-
-**UC06 — `GET /api/conversations/{id}`** → 200 `{ "id", "title", "createdAt", "messages": [ <message như UC05> ] }`.
-Không phải chủ → 404.
-
-**UC08 — `GET /api/documents/{id}/file`** (mọi vai) → tệp gốc, `Content-Type` theo `mime_type`,
-`Content-Disposition: inline`. Client mở PDF tại trang bằng `…/file#page=12`.
+`message` = `{ "id", "sentAt", "question": { "id", "content" }, "answer", "source": { "documentId", "title", "page" } }`.
+Câu hỏi đã ẩn → `QUESTION_NOT_FOUND`; hội thoại không thuộc người gọi → `CONVERSATION_NOT_FOUND` (BR05).
+Hội thoại mới lấy `title` = nội dung câu hỏi đầu tiên. Hội thoại cũ vẫn hiện câu hỏi đã ẩn.
 
 ### 6.4. M3 · Nội dung
 
-**UC07 — `GET /api/documents?q=&page=&size=`** (mọi vai) — tìm theo tiêu đề (`ILIKE`, `q` ≤ 200)
-```json
-{ "items": [ { "id": "…", "title": "…", "mimeType": "application/pdf", "pageCount": 48,
-  "uploadedBy": "Trần Thị B", "createdAt": "…" } ], … }
-```
-**`GET /api/documents/{id}`** → một mục như trên.
-
-**UC10 — `POST /api/documents`** (CONTENT_ADMIN), `multipart/form-data`: `file` (PDF/DOCX,
-≤ 20 MB), `title` (3–500 ký tự) → 201 tài liệu vừa tạo.
-Lỗi: 409 `DUPLICATE_DOCUMENT` (trùng SHA-256), 415 sai định dạng, 413 quá lớn.
-
-**UC11 — `PATCH /api/documents/{id}`** (CONTENT_ADMIN) `{ "title": "…" }` → 200.
-
-**UC12 — `DELETE /api/documents/{id}`** (CONTENT_ADMIN) → 204, xóa cả tệp.
-Lỗi: 409 `DOCUMENT_IN_USE` nếu còn câu hỏi dẫn tới.
-
-**UC22 — chủ đề** (CONTENT_ADMIN)
-
-| Method | Đường dẫn | Body | Kết quả |
+| Action | Vai | `data` gửi | `data` trả về |
 |---|---|---|---|
-| POST | `/api/topics` | `{ "name": "…", "sortOrder": 1 }` | 201 |
-| PATCH | `/api/topics/{id}` | `{ "name"?, "sortOrder"? }` | 200 |
-| DELETE | `/api/topics/{id}` | — | 204; 409 `TOPIC_NOT_EMPTY` nếu còn câu hỏi |
+| `topic.list` (UC07) | USER | — | `[ { "id", "name", "sortOrder", "questionCount" } ]` — chỉ đếm câu hỏi đang hiện |
+| `topic.questions` (UC07) | USER | `{ "topicId" }` | `[ { "id", "content" } ]` — nút câu hỏi đang hiện |
+| `topic.create` (UC23) | CONTENT_ADMIN | `{ "name", "sortOrder"? }` | chủ đề |
+| `topic.update` (UC23) | CONTENT_ADMIN | `{ "id", "name"?, "sortOrder"? }` | chủ đề |
+| `topic.delete` (UC23) | CONTENT_ADMIN | `{ "id" }` | `{}`; còn câu hỏi → `TOPIC_NOT_EMPTY` |
+| `question.listForEditor` (UC22) | CONTENT_ADMIN | `{ "topicId" }` | mọi câu hỏi, kể cả đã ẩn, kèm `answer`, `documentId`, `page`, `active` |
+| `question.create` (UC22) | CONTENT_ADMIN | `{ "topicId", "content" (≤ 200), "answer" (≤ 5000), "documentId", "page", "sortOrder"?, "active"? }` | câu hỏi |
+| `question.update` (UC22) | CONTENT_ADMIN | `{ "id", …các trường như trên }` | câu hỏi |
+| `question.hide` (UC22) | CONTENT_ADMIN | `{ "id" }` | `{}` — đặt `is_active = false` |
+| `document.list` (UC07) | USER | `{ "q"?, "page", "size" }` — tìm theo tiêu đề | trang `{ "id", "title", "mimeType", "pageCount", "uploadedBy", "createdAt" }` |
+| `document.get` | USER | `{ "id" }` | một tài liệu |
+| `document.download` (UC08) | USER | `{ "id" }` | `{ "fileName", "mimeType", "size", "contentBase64" }` |
+| `document.upload` (UC10) | CONTENT_ADMIN | `{ "title" (3–500), "fileName", "contentBase64" }` | tài liệu; trùng SHA-256 → `DUPLICATE_DOCUMENT` |
+| `document.rename` (UC11) | CONTENT_ADMIN | `{ "id", "title" }` | tài liệu |
+| `document.delete` (UC12) | CONTENT_ADMIN | `{ "id" }` | `{}`; còn câu hỏi dẫn tới → `DOCUMENT_IN_USE` |
 
-**UC23 — câu hỏi – câu trả lời** (CONTENT_ADMIN)
-
-| Method | Đường dẫn | Body | Kết quả |
-|---|---|---|---|
-| GET | `/api/admin/questions?topicId=` | — | Mọi câu hỏi của chủ đề, kể cả đã ẩn, kèm `answer`, `documentId`, `page`, `active` |
-| POST | `/api/questions` | `{ "topicId", "content" (≤200), "answer" (≤5000), "documentId", "page", "sortOrder"? }` | 201 |
-| PATCH | `/api/questions/{id}` | các trường như POST, thêm `"active"` | 200 |
-| DELETE | `/api/questions/{id}` | — | 204, đặt `is_active = false` |
-
-Kiểm tra: `page ≥ 1` và `page ≤ page_count` khi tài liệu có `page_count`; chủ đề và tài liệu phải
-tồn tại (400 `VALIDATION_ERROR` nếu sai).
+Kiểm tra câu hỏi: `page ≥ 1` và `page ≤ page_count` khi tài liệu có `page_count`; chủ đề và tài liệu phải
+tồn tại (`VALIDATION_ERROR` nếu sai). Loại tệp nhận diện bằng nội dung (`%PDF`, hoặc ZIP + đuôi `.docx`).
 
 ### 6.5. M4 · Quản trị
 
-**UC14 — `GET /api/users?q=&page=&size=`** (SYSTEM_ADMIN) — tìm theo mã, email, họ tên
-```json
-{ "items": [ { "id", "code", "email", "fullName", "role", "department", "active" } ], … }
-```
+| Action | Vai | `data` gửi | `data` trả về |
+|---|---|---|---|
+| `user.list` (UC14) | SYSTEM_ADMIN | `{ "q"?, "page", "size" }` — tìm theo mã, email, họ tên | trang người dùng |
+| `user.update` (UC15, UC16) | SYSTEM_ADMIN | `{ "id", "active"? , "role"? }` | người dùng sau khi sửa; sửa chính mình → `SELF_MODIFICATION` (BR04) |
+| `system.health` (UC20) | SYSTEM_ADMIN | — | `{ "status", "database", "uptimeSeconds", "time" }` |
 
-**UC15, UC16 — `PATCH /api/users/{id}`** (SYSTEM_ADMIN)
-```json
-{ "active": false }            // UC15 khóa / mở
-{ "role": "CONTENT_ADMIN" }    // UC16 phân quyền
-```
-→ 200 người dùng sau khi sửa. Lỗi 400 `SELF_MODIFICATION` nếu `id` là chính người gọi (BR04).
-Có hiệu lực ngay request kế tiếp của người bị sửa (BR02).
-
-**UC20 — `GET /api/health`** (SYSTEM_ADMIN)
-```json
-{ "status": "UP", "database": "UP", "uptimeSeconds": 86400, "time": "2026-11-07T08:15:00Z" }
-```
-`database` = kết quả `SELECT 1`; lỗi CSDL → `"DOWN"`, `status` = `"DEGRADED"`, vẫn trả 200.
+`database` = kết quả `SELECT 1`; lỗi CSDL → `"DOWN"`, `status` = `"DEGRADED"`.
 
 ---
 
@@ -360,32 +341,32 @@ Có hiệu lực ngay request kế tiếp của người bị sửa (BR02).
 
 **UC05 — Chọn câu hỏi, nhận trả lời**
 
-1. Client gọi `GET /api/topics`, hiện các nút chủ đề.
-2. Server kiểm tra token, tài khoản, vai (2a: sai → 401).
-3. Sinh viên chọn chủ đề; client gọi `GET /api/topics/{id}/questions` (3a: rỗng → "chưa có câu hỏi").
-4. Sinh viên bấm một nút; client gửi `POST /api/chat { questionId, conversationId }`.
-5. Server đọc câu hỏi `is_active`, câu trả lời và tài liệu nguồn (5a: không còn → 404).
+1. Client gửi `topic.list`, hiện danh sách chủ đề.
+2. Server kiểm tra token, tài khoản, vai (2a: sai → `UNAUTHORIZED`).
+3. Sinh viên chọn chủ đề; client gửi `topic.questions` (3a: rỗng → "chưa có câu hỏi").
+4. Sinh viên bấm một nút; client gửi `chat.ask { questionId, conversationId }`.
+5. Server đọc câu hỏi `is_active`, câu trả lời và tài liệu nguồn (5a: không còn → `QUESTION_NOT_FOUND`).
 6. Server lưu hội thoại (nếu mới) và một `message` trong cùng transaction.
 7. Server trả câu trả lời kèm nguồn; client hiện thành một lượt hỏi – đáp.
-8. Sinh viên mở nguồn (UC08) bằng `GET /api/documents/{id}/file#page=N`.
+8. Sinh viên bấm nguồn (UC08): client gửi `document.download`, ghi tệp tạm rồi mở bằng ứng dụng mặc định, báo số trang.
 
 **UC10 → UC22 → UC23 — Nhập nội dung (Giáo vụ)**
 
 1. Tải lên PDF / DOCX, nhập tiêu đề (UC10).
-2. Server kiểm quyền, tính SHA-256 (trùng → 409), lưu tệp vào `storage/yyyy/MM/<uuid>.<ext>`.
+2. Client gửi `document.upload` (tệp base64); server kiểm quyền, tính SHA-256 (trùng → `DUPLICATE_DOCUMENT`), lưu tệp vào `storage/yyyy/MM/<uuid>.<ext>`.
 3. Server lưu bản ghi `documents`, đọc `page_count` bằng PDFBox nếu là PDF.
 4. Chọn hoặc tạo chủ đề (UC22).
 5. Soạn câu hỏi và câu trả lời (UC23).
-6. Gắn tài liệu nguồn, số trang; server kiểm tra (lỗi → 400, giáo vụ sửa và gửi lại).
+6. Gắn tài liệu nguồn, số trang; server kiểm tra (lỗi → `VALIDATION_ERROR`, giáo vụ sửa và gửi lại).
 7. Lưu thành công → câu hỏi hiện thành nút ngay ở lần sinh viên mở chủ đề kế tiếp.
 
 **UC14 → UC15 / UC16 — Quản trị tài khoản**
 
 1. Quản trị viên mở danh sách tài khoản (UC14).
 2. Chọn khóa / mở (UC15) hoặc đổi vai (UC16).
-3. Server kiểm tra thao tác lên chính mình? Có → 400 `SELF_MODIFICATION`.
+3. Server kiểm tra thao tác lên chính mình? Có → `SELF_MODIFICATION`.
 4. Cập nhật `users.is_active` hoặc `users.role` trong transaction.
-5. Request kế tiếp của tài khoản đó đọc lại quyền từ CSDL (BR02).
+5. Yêu cầu kế tiếp của tài khoản đó đọc lại quyền từ CSDL (BR02).
 
 ---
 
@@ -394,50 +375,66 @@ Có hiệu lực ngay request kế tiếp của người bị sửa (BR02).
 ### 8.1. Cấu trúc dự án
 
 ```
-server/
+server/                                # Java Spring Boot (không web) — Model + Controller
 ├── pom.xml
 ├── Dockerfile
 └── src/main/
     ├── java/vn/tangthu/
     │   ├── TangThuApplication.java
     │   ├── common/                    # dùng chung, không thuộc module nào
-    │   │   ├── config/                # SecurityConfig, AppProperties
-    │   │   ├── security/              # JwtService, JwtAuthFilter, AuthUser
-    │   │   ├── exception/             # ApiException, GlobalExceptionHandler
-    │   │   ├── dto/                   # ErrorResponse, PageResponse
+    │   │   ├── socket/                # SocketServer, ClientConnection, FrameCodec, SocketDispatcher,
+    │   │   │                          # SocketController, SocketRequest — tầng mạng TCP
+    │   │   ├── config/                # AppProperties, CryptoConfig
+    │   │   ├── security/              # JwtService, AuthUser
+    │   │   ├── exception/             # ApiException
+    │   │   ├── dto/                   # PageResponse
     │   │   └── util/                  # FileStorage
     │   ├── account/                   # M1 · Tài khoản — UC01–UC04
     │   │   ├── model/                 # User, Role
     │   │   ├── repository/            # UserRepository
     │   │   ├── service/               # AuthService
-    │   │   ├── controller/            # AuthController
+    │   │   ├── controller/            # AuthSocketController   (auth.*)
     │   │   └── dto/                   # LoginRequest, ChangePasswordRequest, UserDto
     │   ├── chat/                      # M2 · Hỏi đáp — UC05, UC06
     │   │   ├── model/                 # Conversation, Message
     │   │   ├── repository/            # ConversationRepository, MessageRepository
     │   │   ├── service/               # ChatService
-    │   │   ├── controller/            # ChatController
+    │   │   ├── controller/            # ChatSocketController   (chat.*, conversation.*)
     │   │   └── dto/                   # AskRequest, ChatDtos
     │   ├── content/                   # M3 · Nội dung — UC07, UC08, UC10–UC12, UC22, UC23
     │   │   ├── model/                 # Topic, Question, Document
     │   │   ├── repository/            # TopicRepository, QuestionRepository, DocumentRepository
     │   │   ├── service/               # TopicService, QuestionService, DocumentService
-    │   │   ├── controller/            # TopicController, QuestionController, DocumentController
+    │   │   ├── controller/            # TopicSocketController, QuestionSocketController, DocumentSocketController
     │   │   └── dto/                   # ContentDtos, CreateTopic, UpdateTopic, QuestionRequest, RenameRequest
     │   └── admin/                     # M4 · Quản trị — UC14–UC16, UC20 (dùng model User của M1)
     │       ├── service/               # AdminService
-    │       ├── controller/            # AdminController, HealthController
+    │       ├── controller/            # AdminSocketController  (user.*, system.health)
     │       └── dto/                   # UpdateUserRequest, Health
     └── resources/
         ├── application.yml
         └── db/
             ├── migration/             # V1__init.sql — lược đồ
             └── demo/                  # dữ liệu demo — tắt bằng FLYWAY_LOCATIONS khi triển khai thật
+
+client/                                # Java Swing desktop — View (+ Controller phía client)
+├── pom.xml                            # đóng gói tangthu-client.jar chạy được
+└── src/main/java/vn/tangthu/client/
+    ├── App.java                       # main: đọc IP / cổng máy chủ
+    ├── common/
+    │   ├── net/                       # SocketClient, FrameCodec, ApiError, PageResult — tầng mạng TCP
+    │   └── view/                      # MainFrame (tab theo vai), Async (SwingWorker), FileOpener, Ui
+    ├── account/  {model, controller, view}   # M1 · LoginPanel, ChangePasswordDialog
+    ├── chat/     {model, controller, view}   # M2 · ChatPanel
+    ├── content/  {model, controller, view}   # M3 · DocumentsPanel, ContentPanel
+    └── admin/    {model, controller, view}   # M4 · UsersPanel, HealthPanel
 ```
 
-Chia **theo module trước, theo tầng MVC sau**: mỗi thành viên phụ trách trọn một thư mục module, bên trong
-có đủ Model (`model/` + `repository/`), Controller (`controller/`), nghiệp vụ (`service/`) và dữ liệu
-trao đổi (`dto/`). View là giao diện ở `client/src/modules/<cùng tên module>/`.  Controller chỉ nhận/trả DTO (`record`); entity không lộ ra JSON.
+Chia **theo module trước, theo tầng MVC sau**: mỗi thành viên phụ trách trọn một module ở cả `server/`
+lẫn `client/`. Phía server: Model (`model/` + `repository/`), Controller (`controller/` — đăng ký các
+action socket), nghiệp vụ (`service/`), dữ liệu trao đổi (`dto/`). Phía client: `model/` (record nhận từ
+JSON), `controller/` (gửi action qua `SocketClient`), `view/` (màn hình Swing). Controller chỉ nhận/trả
+DTO (`record`); entity không lộ ra JSON.
 
 ### 8.2. `pom.xml` — phụ thuộc chính
 
@@ -449,9 +446,9 @@ trao đổi (`dto/`). View là giao diện ở `client/src/modules/<cùng tên m
 </parent>
 <properties><java.version>21</java.version></properties>
 <dependencies>
-  <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+  <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-json</artifactId></dependency>
   <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-jpa</artifactId></dependency>
-  <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-security</artifactId></dependency>
+  <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-crypto</artifactId></dependency>
   <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-validation</artifactId></dependency>
   <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>runtime</scope></dependency>
   <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-core</artifactId></dependency>
@@ -462,16 +459,15 @@ trao đổi (`dto/`). View là giao diện ở `client/src/modules/<cùng tên m
   <dependency><groupId>org.apache.pdfbox</groupId><artifactId>pdfbox</artifactId><version>3.0.3</version></dependency>
   <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><optional>true</optional></dependency>
   <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
-  <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-test</artifactId><scope>test</scope></dependency>
 </dependencies>
 ```
 
 ### 8.3. `application.yml`
 
 ```yaml
-server:
-  port: 8080
 spring:
+  main:
+    web-application-type: none        # không Tomcat; client nối qua TCP socket
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/tangthu}
     username: ${DB_USER:tangthu}
@@ -479,16 +475,17 @@ spring:
   jpa:
     hibernate.ddl-auto: validate      # schema do Flyway quản lý
     open-in-view: false
-  servlet.multipart:
-    max-file-size: 20MB
-    max-request-size: 21MB
 app:
   jwt:
     secret: ${JWT_SECRET}             # ≥ 32 byte, bắt buộc
     ttl: PT8H
   storage-dir: ${STORAGE_DIR:./storage}
   department: CNTT
-  cors-origins: ${CORS_ORIGINS:http://localhost:3000}
+  socket:
+    port: ${SOCKET_PORT:9090}
+    threads: ${SOCKET_THREADS:64}     # số client phục vụ đồng thời
+    max-frame-mb: 32                  # đủ cho tệp 20 MB mã hóa base64
+    idle-timeout: ${SOCKET_IDLE_TIMEOUT:PT30M}
 ```
 
 ### 8.4. Entity theo biểu đồ lớp
@@ -599,60 +596,56 @@ public class Message {
 }
 ```
 
-### 8.5. Bảo mật — JWT và BR01, BR02
+### 8.5. Máy chủ socket, xác thực — JWT và BR01, BR02
 
 ```java
-public record AuthUser(UUID id, Role role) {}
-
-@Component @RequiredArgsConstructor
-public class JwtAuthFilter extends OncePerRequestFilter {
-    private final JwtService jwt;
-    private final UserRepository users;
-    @Value("${app.department}") private String department;
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
-            throws ServletException, IOException {
-        String h = req.getHeader(HttpHeaders.AUTHORIZATION);
-        if (h != null && h.startsWith("Bearer ")) {
-            jwt.parseUserId(h.substring(7))                       // Optional<UUID>, rỗng nếu token sai/hết hạn
-               .flatMap(users::findById)                          // BR02: đọc lại từ CSDL mỗi request
-               .filter(u -> u.isActive() && department.equals(u.getDepartment()))   // BR01
-               .ifPresent(u -> SecurityContextHolder.getContext().setAuthentication(
-                   new UsernamePasswordAuthenticationToken(new AuthUser(u.getId(), u.getRole()), null,
-                       List.of(new SimpleGrantedAuthority("ROLE_" + u.getRole())))));
-        }
-        chain.doFilter(req, res);
+@Component   // SmartLifecycle: mở cổng khi Spring khởi động xong, đóng khi tắt
+public class SocketServer implements SmartLifecycle {
+    public void start() {
+        server = new ServerSocket();
+        server.setReuseAddress(true);
+        server.bind(new InetSocketAddress(cfg.port()), 100);
+        workers = Executors.newFixedThreadPool(cfg.threads());          // mỗi client một luồng
+        acceptor = new Thread(() -> {
+            while (running) {
+                Socket s = server.accept();                               // chờ client kết nối
+                s.setTcpNoDelay(true);
+                s.setSoTimeout((int) cfg.idleTimeout().toMillis());
+                workers.execute(new ClientConnection(s, dispatcher, maxFrameBytes));
+            }
+        }, "socket-acceptor");
+        acceptor.start();
     }
 }
 
-@Configuration @EnableMethodSecurity @RequiredArgsConstructor
-public class SecurityConfig {
-    private final JwtAuthFilter jwtFilter;
-
-    @Bean SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        return http
-            .csrf(c -> c.disable())
-            .cors(Customizer.withDefaults())
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(a -> a
-                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-                .anyRequest().authenticated())
-            .exceptionHandling(e -> e
-                .authenticationEntryPoint((rq, rs, ex) -> ApiErrors.write(rs, 401, "UNAUTHORIZED", "Cần đăng nhập."))
-                .accessDeniedHandler((rq, rs, ex) -> ApiErrors.write(rs, 403, "FORBIDDEN", "Không đủ quyền.")))
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-            .build();
+class ClientConnection implements Runnable {                              // vòng đời một kết nối
+    public void run() {
+        byte[] frame;
+        while ((frame = FrameCodec.read(in, maxFrameBytes)) != null) {     // null = client đóng socket
+            FrameCodec.write(out, dispatcher.handle(frame));
+        }
     }
-    @Bean static RoleHierarchy roleHierarchy() {
-        return RoleHierarchyImpl.fromHierarchy("ROLE_SYSTEM_ADMIN > ROLE_CONTENT_ADMIN\nROLE_CONTENT_ADMIN > ROLE_USER");
-    }
-    @Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 }
 ```
 
-Phân quyền từng endpoint bằng `@PreAuthorize("hasRole('CONTENT_ADMIN')")` (giáo vụ và quản trị viên
-nhờ `RoleHierarchy`) hoặc `hasRole('SYSTEM_ADMIN')`.
+`SocketDispatcher` gom action của mọi `SocketController` (mỗi module một lớp), rồi với mỗi khung:
+
+1. Đọc JSON (`BAD_FRAME` nếu hỏng), tìm action (`UNKNOWN_ACTION`).
+2. Action cần đăng nhập: `jwt.parseUserId(token)` → `users.findById` — **đọc lại từ CSDL mỗi yêu cầu**
+   (BR02) → `u.canUseSystem("CNTT")` (BR01: còn hoạt động, đúng khoa). Sai → `UNAUTHORIZED`.
+3. So cấp vai `USER < CONTENT_ADMIN < SYSTEM_ADMIN` với vai tối thiểu của action → `FORBIDDEN`.
+4. Gọi service, bọc kết quả `{ id, ok: true, data }`; `ApiException` → `{ id, ok: false, error }`.
+
+```java
+public class ChatSocketController implements SocketController {
+    public void register(Routes routes) {
+        routes.secured("chat.ask", Role.USER, r -> {
+            AskRequest req = r.body(AskRequest.class);                    // Jackson + Bean Validation
+            return chat.ask(r.me().id(), req.questionId(), req.conversationId());
+        });
+    }
+}
+```
 
 ### 8.6. Ví dụ service — UC05
 
@@ -685,21 +678,24 @@ public record AskRequest(@NotNull UUID questionId, UUID conversationId) {}
 `FileStorage` ghi vào `app.storage-dir`, tên tệp `yyyy/MM/<uuid>.<ext>`, không dùng tên gốc của người
 dùng. `DocumentService.upload`:
 
-1. Kiểm tra `contentType` ∈ {`application/pdf`,
-   `application/vnd.openxmlformats-officedocument.wordprocessingml.document`} (415 nếu không).
-2. Tính SHA-256 trên luồng tệp; `existsByFileHash` → 409 `DUPLICATE_DOCUMENT`.
+1. Giải mã base64; > 20 MB → `FILE_TOO_LARGE`. Nhận diện loại theo nội dung: `%PDF` hoặc ZIP + đuôi
+   `.docx` (`UNSUPPORTED_FILE` nếu không).
+2. Tính SHA-256; `existsByFileHash` → `DUPLICATE_DOCUMENT`.
 3. Ghi tệp, đọc `pageCount` bằng `Loader.loadPDF(...)` nếu là PDF, lưu bản ghi.
    Lỗi khi lưu bản ghi → xóa tệp vừa ghi.
 
-`DocumentService.remove`: `questionRepository.existsByDocumentId(id)` → 409 `DOCUMENT_IN_USE`; nếu
+`DocumentService.remove`: `questionRepository.existsByDocumentId(id)` → `DOCUMENT_IN_USE`; nếu
 không, xóa bản ghi rồi xóa tệp.
 
 ### 8.8. Xử lý lỗi
 
-`ApiException(HttpStatus status, String code, String message)` ném từ service.
-`@RestControllerAdvice GlobalExceptionHandler` chuyển thành JSON lỗi ở mục 6.1, gồm cả
-`MethodArgumentNotValidException` → 400 `VALIDATION_ERROR`,
-`MaxUploadSizeExceededException` → 413, `DataIntegrityViolationException` → 409.
+`ApiException(String code, String message)` ném từ service. `SocketDispatcher` bắt và trả khung
+`{ "ok": false, "error": { code, message } }`, gồm cả lỗi Bean Validation → `VALIDATION_ERROR`,
+`DataIntegrityViolationException` → `CONFLICT`, lỗi bất ngờ → `INTERNAL_ERROR` (ghi log, không lộ chi tiết).
+Kết nối **không bị đóng** khi gặp lỗi nghiệp vụ; chỉ đóng khi khung quá lớn hoặc client ngắt.
+
+Phía client, `SocketClient.call` ném `ApiError(code, message)`; lỗi mạng thành `NETWORK_ERROR` và lần
+gọi sau tự kết nối lại. `UNAUTHORIZED` đưa người dùng về màn đăng nhập.
 
 ### 8.9. Chạy bằng Docker Compose
 
@@ -709,7 +705,7 @@ services:
     image: postgres:16
     environment: { POSTGRES_DB: tangthu, POSTGRES_USER: tangthu, POSTGRES_PASSWORD: ${DB_PASSWORD} }
     volumes: [ "pgdata:/var/lib/postgresql/data" ]
-  api:
+  server:
     build: ./server
     environment:
       DATABASE_URL: jdbc:postgresql://db:5432/tangthu
@@ -718,35 +714,44 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       STORAGE_DIR: /data/storage
     volumes: [ "storage:/data/storage" ]
-    ports: [ "8080:8080" ]
+    ports: [ "9090:9090" ]          # cổng TCP socket
     depends_on: [ db ]
 volumes: { pgdata: {}, storage: {} }
 ```
 
 `Dockerfile` hai giai đoạn: `maven:3.9-eclipse-temurin-21` để build, `eclipse-temurin:21-jre` để chạy.
+Client không chạy trong Docker: mỗi máy chạy `java -jar tangthu-client.jar <IP máy chủ> 9090`.
 
 ---
 
 ## 9. Kiểm thử và nghiệm thu
 
-Kiểm thử tích hợp (`@SpringBootTest` + `MockMvc`, CSDL PostgreSQL thử nghiệm) tối thiểu:
+Kiểm thử tích hợp `SocketIntegrationTest` (`@SpringBootTest`, server mở cổng ngẫu nhiên, client TCP thật,
+CSDL PostgreSQL thử nghiệm):
 
 | # | Kịch bản | Kết quả mong đợi |
 |---|---|---|
-| 1 | Đăng nhập đúng / sai mật khẩu / tài khoản khóa / `department ≠ CNTT` | 200 / 401 / 401 / 401 |
-| 2 | Khóa tài khoản rồi dùng lại token cũ | 401 ở request kế tiếp (BR02) |
-| 3 | Đổi vai USER → CONTENT_ADMIN rồi gọi `POST /api/topics` bằng token cũ | 201 (vai mới có hiệu lực ngay) |
-| 4 | Quản trị viên tự khóa / tự hạ vai | 400 `SELF_MODIFICATION` |
-| 5 | Sinh viên gọi `POST /api/documents` | 403 |
-| 6 | `POST /api/chat` với câu hỏi đang hiện | 201, `answer` và `source` khớp câu hỏi |
-| 7 | `POST /api/chat` với câu hỏi đã ẩn | 404 `QUESTION_NOT_FOUND` |
-| 8 | Xem hội thoại của người khác | 404 |
-| 9 | Tải lên cùng một tệp hai lần | Lần 2: 409 `DUPLICATE_DOCUMENT` |
-| 10 | Gỡ tài liệu còn câu hỏi dẫn tới | 409 `DOCUMENT_IN_USE` |
-| 11 | Xóa chủ đề còn câu hỏi | 409 `TOPIC_NOT_EMPTY` |
-| 12 | Tạo câu hỏi với `page` > `page_count` | 400 `VALIDATION_ERROR` |
+| P1 | Nhiều yêu cầu trên một kết nối | Phản hồi đúng thứ tự, cùng `id` |
+| P2 | Khung không phải JSON / action lạ | `BAD_FRAME` / `UNKNOWN_ACTION`, kết nối vẫn mở |
+| P3 | Khung khai báo dài hơn 32 MB | `FRAME_TOO_LARGE`, server đóng kết nối |
+| P4 | 10 client đồng thời × 20 yêu cầu | Tất cả thành công |
+| 1 | Đăng nhập đúng / sai mật khẩu / tài khoản khóa / `department ≠ CNTT` | `ok` / `UNAUTHORIZED` ×3 |
+| 2 | Khóa tài khoản rồi dùng lại token cũ | `UNAUTHORIZED` ở yêu cầu kế tiếp (BR02) |
+| 3 | Đổi vai USER → CONTENT_ADMIN rồi gửi `topic.create` bằng token cũ | `ok` (vai mới có hiệu lực ngay) |
+| 4 | Quản trị viên tự khóa / tự hạ vai | `SELF_MODIFICATION` |
+| 5 | Sinh viên gửi `document.upload` | `FORBIDDEN` |
+| 6 | `chat.ask` với câu hỏi đang hiện | `ok`, `answer` và `source` khớp câu hỏi |
+| 7 | `chat.ask` với câu hỏi đã ẩn | `QUESTION_NOT_FOUND` |
+| 8 | Xem hội thoại của người khác | `CONVERSATION_NOT_FOUND` |
+| 9 | Tải lên cùng một tệp hai lần | Lần 2: `DUPLICATE_DOCUMENT` |
+| 10 | Gỡ tài liệu còn câu hỏi dẫn tới | `DOCUMENT_IN_USE` |
+| 11 | Xóa chủ đề còn câu hỏi | `TOPIC_NOT_EMPTY` |
+| 12 | Tạo câu hỏi với `page` > `page_count` | `VALIDATION_ERROR` |
 | 13 | Ẩn câu hỏi rồi xem lại hội thoại cũ có câu hỏi đó | Vẫn hiển thị câu hỏi và câu trả lời |
-| 14 | `GET /api/health` khi CSDL dừng | 200, `database: "DOWN"` |
+| 14 | `system.health` | `status`, `database` = `UP` |
+
+Phía client: `SocketClientTest` chạy với một server giả trên cổng ngẫu nhiên (gửi / nhận khung, tiếng Việt
+có dấu, lỗi `FORBIDDEN`, không có server → `NETWORK_ERROR`).
 
 Nghiệm thu thủ công theo ba vai: sinh viên chọn chủ đề → câu hỏi → mở nguồn đúng trang; giáo vụ tải
 tài liệu, tạo chủ đề, soạn câu hỏi rồi thấy nút mới phía sinh viên; quản trị viên khóa tài khoản,
@@ -758,9 +763,10 @@ tài liệu, tạo chủ đề, soạn câu hỏi rồi thấy nút mới phía 
 
 | Thiết kế | Mã nguồn Spring Boot |
 |---|---|
-| Module M1–M4 (BFD) | Mỗi module một package, trong đó chia tầng MVC: `account` (M1), `chat` (M2), `content` (M3), `admin` (M4); phía client là `client/src/modules/<module>/` |
-| Mô hình MVC | `model/` (Model), `controller/` (Controller), `dto/` → JSON (View phía server; giao diện ở `client/`) |
-| 3 tác nhân (DFD, use case) | `Role` + `RoleHierarchy` |
+| Module M1–M4 (BFD) | Mỗi module một package, trong đó chia tầng MVC: `account` (M1), `chat` (M2), `content` (M3), `admin` (M4); phía client là `client/src/main/java/vn/tangthu/client/<module>/` |
+| Mô hình MVC | Server: `model/` (Model), `controller/` (Controller — action socket), `dto/` → JSON. Client: `model/`, `controller/`, `view/` (Swing) |
+| Giao tiếp client–server (TCP/IP) | `common/socket/` (server) ↔ `common/net/` (client), mục 6 |
+| 3 tác nhân (DFD, use case) | `Role` + cấp vai trong `SocketDispatcher`; tab hiện theo vai ở `MainFrame` |
 | 6 thực thể (ERD) | 6 bảng trong `V1__init.sql` |
 | 6 lớp (biểu đồ lớp) | 6 `@Entity`: `User`, `Topic`, `Question`, `Document`, `Conversation`, `Message` |
 | Hợp thành Conversation ◆ Message | `cascade = ALL, orphanRemoval = true` + `ON DELETE CASCADE` |

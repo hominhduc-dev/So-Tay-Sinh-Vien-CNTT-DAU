@@ -1,4 +1,5 @@
-# Chạy toàn bộ hệ thống: docker compose up --build  →  web http://localhost:3000, API :8080
+# Chạy server + CSDL: docker compose up --build  →  server TCP socket ở cổng 9090.
+# Client desktop chạy riêng trên từng máy: java -jar client/target/tangthu-client.jar <IP máy chủ> 9090
 # Cấu hình bằng tệp .env cùng thư mục (chép từ .env.example).
 services:
   db:
@@ -16,32 +17,21 @@ services:
       interval: 5s
       retries: 10
 
-  api:
+  server:
     build: ./server
     environment:
       DATABASE_URL: jdbc:postgresql://db:5432/tangthu
       DB_USER: tangthu
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?Đặt JWT_SECRET (≥ 32 ký tự) trong .env}
-      CORS_ORIGINS: ${CORS_ORIGINS:-*}
       FLYWAY_LOCATIONS: ${FLYWAY_LOCATIONS:-classpath:db/migration,classpath:db/demo}
     volumes:
       - storage:/data/storage
     ports:
-      - "8080:8080"
+      - "${SOCKET_PORT:-9090}:9090"   # cổng TCP socket, mở cho các máy trong LAN
     depends_on:
       db:
         condition: service_healthy
-
-  web:
-    build:
-      context: ./client
-      args:
-        API_INTERNAL_URL: http://api:8080
-    ports:
-      - "3000:3000"
-    depends_on:
-      - api
 
 volumes:
   pgdata: {}

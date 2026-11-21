@@ -1,14 +1,8 @@
-server:
-  port: ${PORT:8080}
-  # Trình duyệt gửi kèm cookie của mọi app từng chạy trên cùng host (localhost:*), Next.js
-  # chuyển tiếp nguyên header → vượt mức 8KB mặc định của Tomcat → 400. API không dùng cookie.
-  max-http-request-header-size: 64KB
-  error:
-    include-message: never
-
 spring:
   application:
     name: tangthu-server
+  main:
+    web-application-type: none   # không chạy Tomcat; client nối qua TCP socket
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/tangthu}
     username: ${DB_USER:tangthu}
@@ -22,10 +16,6 @@ spring:
   flyway:
     # Bỏ classpath:db/demo khi triển khai thật (dữ liệu demo có mật khẩu chung).
     locations: ${FLYWAY_LOCATIONS:classpath:db/migration,classpath:db/demo}
-  servlet:
-    multipart:
-      max-file-size: 20MB
-      max-request-size: 21MB
   jackson:
     default-property-inclusion: always
     serialization:
@@ -37,4 +27,8 @@ app:
     ttl: ${JWT_TTL:PT8H}
   storage-dir: ${STORAGE_DIR:./storage}
   department: ${APP_DEPARTMENT:CNTT}
-  cors-origins: ${CORS_ORIGINS:*}
+  socket:
+    port: ${SOCKET_PORT:9090}
+    threads: ${SOCKET_THREADS:64}
+    max-frame-mb: 32               # đủ cho tệp 20 MB đã mã hóa base64
+    idle-timeout: ${SOCKET_IDLE_TIMEOUT:PT30M}
