@@ -1,5 +1,8 @@
 server:
   port: ${PORT:8080}
+  # Trình duyệt gửi kèm cookie của mọi app từng chạy trên cùng host (localhost:*), Next.js
+  # chuyển tiếp nguyên header → vượt mức 8KB mặc định của Tomcat → 400. API không dùng cookie.
+  max-http-request-header-size: 64KB
   error:
     include-message: never
 

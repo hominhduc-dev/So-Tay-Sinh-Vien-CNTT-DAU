@@ -400,13 +400,18 @@ server-java/
 └── src/main/
     ├── java/vn/tangthu/
     │   ├── TangThuApplication.java
-    │   ├── common/            # SecurityConfig, JwtService, JwtAuthFilter, AuthUser,
-    │   │                      # ApiException, GlobalExceptionHandler, PageResponse, FileStorage
-    │   ├── account/           # M1: User, Role, UserRepository, AuthController, AuthService
-    │   ├── chat/              # M2: Conversation, Message, repositories, ChatController, ChatService
-    │   ├── content/           # M3: Topic, Question, Document, repositories,
-    │   │                      #     TopicController, QuestionController, DocumentController, services
-    │   └── admin/             # M4: AdminController (users), HealthController, AdminService
+    │   ├── controller/        # AuthController (M1), ChatController (M2), TopicController,
+    │   │                      # QuestionController, DocumentController (M3), AdminController, HealthController (M4)
+    │   ├── service/           # AuthService, ChatService, TopicService, QuestionService,
+    │   │                      # DocumentService, AdminService
+    │   ├── repository/        # UserRepository, TopicRepository, QuestionRepository, DocumentRepository,
+    │   │                      # ConversationRepository, MessageRepository
+    │   ├── model/             # @Entity: User, Topic, Question, Document, Conversation, Message; enum Role
+    │   ├── dto/               # UserDto, ContentDtos, ChatDtos, PageResponse, ErrorResponse, *Request
+    │   ├── config/            # SecurityConfig, AppProperties
+    │   ├── security/          # JwtService, JwtAuthFilter, AuthUser
+    │   ├── exception/         # ApiException, GlobalExceptionHandler
+    │   └── util/              # FileStorage
     └── resources/
         ├── application.yml
         └── db/
@@ -735,7 +740,8 @@ tài liệu, tạo chủ đề, soạn câu hỏi rồi thấy nút mới phía 
 
 | Thiết kế | Mã nguồn Spring Boot |
 |---|---|
-| Module M1–M4 (BFD) | Package `account`, `chat`, `content`, `admin` |
+| Module M1–M4 (BFD) | Mỗi module một nhóm Controller + Service: M1 `Auth*`, M2 `Chat*`, M3 `Topic*` / `Question*` / `Document*`, M4 `Admin*` / `HealthController` |
+| Mô hình MVC | `model/` (Model), `controller/` (Controller), `dto/` → JSON (View phía server; giao diện ở `web/`) |
 | 3 tác nhân (DFD, use case) | `Role` + `RoleHierarchy` |
 | 6 thực thể (ERD) | 6 bảng trong `V1__init.sql` |
 | 6 lớp (biểu đồ lớp) | 6 `@Entity`: `User`, `Topic`, `Question`, `Document`, `Conversation`, `Message` |
