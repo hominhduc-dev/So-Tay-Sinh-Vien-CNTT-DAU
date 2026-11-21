@@ -27,7 +27,7 @@ viên không tự khóa hay tự hạ vai; mỗi câu trả lời bắt buộc c
 ## Kiến trúc
 
 ```
- Trình duyệt ──HTTP──▶  web (Next.js, :3000)  ──/api/* ──▶  server-java (Spring Boot, :8080)  ──JDBC──▶  PostgreSQL 16
+ Trình duyệt ──HTTP──▶  client (Next.js, :3000)  ──/api/* ──▶  server (Spring Boot, :8080)  ──JDBC──▶  PostgreSQL 16
  (máy bất kỳ trong LAN)    giao diện                         REST API JSON, JWT                         6 bảng
                                                              + thư mục lưu tệp PDF / DOCX
 ```
@@ -42,7 +42,7 @@ viên không tự khóa hay tự hạ vai; mỗi câu trả lời bắt buộc c
 | Thành phần | Công nghệ |
 |---|---|
 | Server | Java 21, Spring Boot 3.3 (Web, Data JPA, Security, Validation), Flyway, jjwt, PDFBox |
-| Web | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| Client | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
 | CSDL | PostgreSQL 16 |
 | Triển khai | Docker Compose (db + api + web) |
 
@@ -85,52 +85,78 @@ createuser -P tangthu                 # mật khẩu: tangthu
 createdb -O tangthu tangthu
 
 # 2. Server — http://localhost:8080
-cd server-java
+cd server
 export JWT_SECRET="chuoi-ngau-nhien-dai-it-nhat-32-ky-tu"
 mvn spring-boot:run
 
-# 3. Web — http://localhost:3000 (terminal khác)
-cd web
+# 3. Client — http://localhost:3000 (terminal khác)
+cd client
 npm install
 npm run dev
 ```
 
-Chi tiết biến môi trường: [`server-java/README.md`](server-java/README.md), [`web/README.md`](web/README.md).
+Chi tiết biến môi trường: [`server/README.md`](server/README.md), [`client/README.md`](client/README.md).
 
 ## Kiểm thử
 
 ```bash
 # Server: 15 kiểm thử tích hợp trên PostgreSQL thật (cần database tangthu_test)
 createdb -O tangthu tangthu_test
-cd server-java && mvn test
+cd server && mvn test
 
-# Web: kiểm tra kiểu, lint, build production
-cd web && npm run typecheck && npm run lint && npm run build
+# Client: kiểm tra kiểu, lint, build production
+cd client && npm run typecheck && npm run lint && npm run build
 ```
 
 Các kịch bản kiểm thử (đăng nhập, khóa tài khoản có hiệu lực ngay, đổi vai, tự sửa chính mình, chọn câu
 hỏi, câu hỏi đã ẩn, hội thoại của người khác, tải trùng tệp, gỡ tài liệu đang dùng…) liệt kê ở
 `docs/DAC-TA-TRIEN-KHAI.md` mục 9.
 
-## Cấu trúc thư mục
+## Cấu trúc thư mục — mô hình MVC, chia theo module
 
 ```
 .
-├── server-java/                 Server Spring Boot
+├── server/                          Server Spring Boot — Model + Controller
 │   └── src/main/java/vn/tangthu/
-│       ├── controller/          C · nhận request REST, kiểm tra quyền, trả JSON
-│       ├── service/             nghiệp vụ (quy tắc, transaction)
-│       ├── repository/          truy vấn CSDL (Spring Data JPA)
-│       ├── model/               M · 6 entity + Role
-│       ├── dto/                 V · dữ liệu request / response JSON
-│       ├── config/ security/    cấu hình, JWT, phân quyền
-│       └── exception/ util/     xử lý lỗi, lưu tệp
-├── web/                         Web client Next.js
-│   └── src/features/            auth, chat, documents, content, admin
-├── docs/                        SRS, đặc tả triển khai, slide, ảnh chụp
-├── docker-compose.yml           db + api + web
+│       ├── common/                  dùng chung: config, security (JWT), exception, util
+│       ├── account/                 M1 · Tài khoản
+│       ├── chat/                    M2 · Hỏi đáp
+│       ├── content/                 M3 · Nội dung
+│       └── admin/                   M4 · Quản trị
+│           (mỗi module: model/ repository/ service/ controller/ dto/)
+├── client/                          Web client Next.js — View
+│   └── src/
+│       ├── app/                     định tuyến các trang (/login, /chat, /documents, /content, /admin/…)
+│       ├── modules/
+│       │   ├── account/             M1 · đăng nhập, phiên (useAuth, LoginForm, AuthGuard)
+│       │   ├── chat/                M2 · khung chat (ChatBox, AnswerCard)
+│       │   ├── content/             M3 · tài liệu, chủ đề, câu hỏi (DocumentManager, ContentManager…)
+│       │   └── admin/               M4 · tài khoản, trạng thái hệ thống (UserTable, HealthPanel…)
+│       │       (mỗi module: views/ = giao diện, api = gọi REST tới module cùng tên ở server)
+│       ├── components/              khung trang dùng chung (Header, MainNav, Sidebar), nút, ô nhập
+│       └── lib/                     api-client (gọi /api, xử lý lỗi, mở tệp nguồn)
+├── docs/                            SRS, đặc tả triển khai, báo cáo, sơ đồ, slide, ảnh chụp
+├── docker-compose.yml               db + server + client
 └── .env.example
 ```
+
+| Tầng | Ở đâu | Vai trò |
+|---|---|---|
+| **Model** | `server/.../<module>/model/`, `repository/` | Entity JPA ánh xạ bảng PostgreSQL; truy vấn dữ liệu |
+| **Controller** | `server/.../<module>/controller/` (+ `service/`) | Nhận request HTTP, kiểm tra quyền, xử lý nghiệp vụ, trả JSON |
+| **View** | `client/src/modules/<module>/views/` | Giao diện trên trình duyệt; gọi API qua `client/src/modules/<module>/api` |
+
+## Phân công module
+
+Mỗi thành viên phụ trách trọn **một module ở cả server và client**.
+
+| Module | Use case | Server | Client | Người phụ trách |
+|---|---|---|---|---|
+| M1 · Tài khoản | UC01–UC04 | `server/src/main/java/vn/tangthu/account/` | `client/src/modules/account/` | _Họ tên — @github_ |
+| M2 · Hỏi đáp | UC05, UC06, UC08 | `server/src/main/java/vn/tangthu/chat/` | `client/src/modules/chat/` | _Họ tên — @github_ |
+| M3 · Nội dung | UC07, UC10–UC12, UC22, UC23 | `server/src/main/java/vn/tangthu/content/` | `client/src/modules/content/` | _Họ tên — @github_ |
+| M4 · Quản trị | UC14–UC16, UC20 | `server/src/main/java/vn/tangthu/admin/` | `client/src/modules/admin/` | _Họ tên — @github_ |
+| Dùng chung | — | `server/.../common/`, `db/` | `client/src/components/`, `lib/`, `app/` | _Nhóm trưởng_ |
 
 ## Tài liệu
 

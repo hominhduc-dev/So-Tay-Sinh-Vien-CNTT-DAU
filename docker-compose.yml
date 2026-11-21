@@ -17,7 +17,7 @@ services:
       retries: 10
 
   api:
-    build: ./server-java
+    build: ./server
     environment:
       DATABASE_URL: jdbc:postgresql://db:5432/tangthu
       DB_USER: tangthu
@@ -35,7 +35,7 @@ services:
 
   web:
     build:
-      context: ./web
+      context: ./client
       args:
         API_INTERNAL_URL: http://api:8080
     ports:
