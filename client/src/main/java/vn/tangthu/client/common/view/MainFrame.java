@@ -17,6 +17,7 @@ import vn.tangthu.client.account.model.Session;
 import vn.tangthu.client.account.model.User;
 import vn.tangthu.client.account.view.ChangePasswordDialog;
 import vn.tangthu.client.account.view.LoginPanel;
+import vn.tangthu.client.account.view.ProfileDialog;
 import vn.tangthu.client.admin.controller.AdminController;
 import vn.tangthu.client.admin.view.HealthPanel;
 import vn.tangthu.client.admin.view.UsersPanel;
@@ -80,6 +81,9 @@ public class MainFrame extends JFrame {
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.add(new JLabel("<html><b>" + Ui.esc(u.fullName()) + "</b> · " + u.role() + " · " + Ui.esc(u.code())
                 + " &nbsp; <font color='#888'>máy chủ " + c.address() + "</font></html>"));
+        JButton me = new JButton("Thông tin cá nhân");
+        me.addActionListener(e -> ProfileDialog.show(this, auth));
+        right.add(me);
         JButton pw = new JButton("Đổi mật khẩu");
         JButton out = new JButton("Đăng xuất");
         pw.addActionListener(e -> ChangePasswordDialog.show(this, auth));

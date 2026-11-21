@@ -4,7 +4,7 @@ import vn.tangthu.client.account.model.LoginResult;
 import vn.tangthu.client.account.model.User;
 import vn.tangthu.client.common.net.SocketClient;
 
-/** M1 · Tài khoản — UC01 đăng nhập, UC02 đăng xuất, UC03 đổi mật khẩu, UC04 xem thông tin. */
+/** M1 · Tài khoản — UC01 đăng nhập, UC02 đăng xuất, UC03 xem thông tin cá nhân, UC04 đổi mật khẩu. */
 public class AuthController {
     private final SocketClient client;
 

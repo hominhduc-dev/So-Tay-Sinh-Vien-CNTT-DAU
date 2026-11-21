@@ -284,8 +284,8 @@ client ─▶ {"id":4,"action":"document.upload","token":"eyJ…","data":{…}}
 |---|---|---|---|
 | `system.ping` | — (công khai) | — | `{ "pong": true }` — đo độ trễ khứ hồi |
 | `auth.login` (UC01) | — (công khai) | `{ "login", "password" }` — login = mã hoặc email | `{ "token", "user" }` |
-| `auth.me` (UC04) | USER | — | `{ "user": { "id", "code", "email", "fullName", "role", "department", "active" } }` |
-| `auth.changePassword` (UC03) | USER | `{ "currentPassword", "newPassword" }` (8–72 ký tự) | `{}`; sai mật khẩu cũ → `WRONG_PASSWORD` |
+| `auth.me` (UC03) | USER | — | `{ "user": { "id", "code", "email", "fullName", "role", "department", "active" } }` |
+| `auth.changePassword` (UC04) | USER | `{ "currentPassword", "newPassword" }` (8–72 ký tự) | `{}`; sai mật khẩu cũ → `WRONG_PASSWORD` |
 
 Đăng nhập sai, tài khoản khóa hay `department ≠ CNTT` đều trả `UNAUTHORIZED` cùng một thông báo, không
 tiết lộ lý do. Token hết hạn sau 8 giờ.
@@ -308,13 +308,13 @@ Hội thoại mới lấy `title` = nội dung câu hỏi đầu tiên. Hội th
 |---|---|---|---|
 | `topic.list` (UC07) | USER | — | `[ { "id", "name", "sortOrder", "questionCount" } ]` — chỉ đếm câu hỏi đang hiện |
 | `topic.questions` (UC07) | USER | `{ "topicId" }` | `[ { "id", "content" } ]` — nút câu hỏi đang hiện |
-| `topic.create` (UC23) | CONTENT_ADMIN | `{ "name", "sortOrder"? }` | chủ đề |
-| `topic.update` (UC23) | CONTENT_ADMIN | `{ "id", "name"?, "sortOrder"? }` | chủ đề |
-| `topic.delete` (UC23) | CONTENT_ADMIN | `{ "id" }` | `{}`; còn câu hỏi → `TOPIC_NOT_EMPTY` |
-| `question.listForEditor` (UC22) | CONTENT_ADMIN | `{ "topicId" }` | mọi câu hỏi, kể cả đã ẩn, kèm `answer`, `documentId`, `page`, `active` |
-| `question.create` (UC22) | CONTENT_ADMIN | `{ "topicId", "content" (≤ 200), "answer" (≤ 5000), "documentId", "page", "sortOrder"?, "active"? }` | câu hỏi |
-| `question.update` (UC22) | CONTENT_ADMIN | `{ "id", …các trường như trên }` | câu hỏi |
-| `question.hide` (UC22) | CONTENT_ADMIN | `{ "id" }` | `{}` — đặt `is_active = false` |
+| `topic.create` (UC22) | CONTENT_ADMIN | `{ "name", "sortOrder"? }` | chủ đề |
+| `topic.update` (UC22) | CONTENT_ADMIN | `{ "id", "name"?, "sortOrder"? }` | chủ đề |
+| `topic.delete` (UC22) | CONTENT_ADMIN | `{ "id" }` | `{}`; còn câu hỏi → `TOPIC_NOT_EMPTY` |
+| `question.listForEditor` (UC23) | CONTENT_ADMIN | `{ "topicId" }` | mọi câu hỏi, kể cả đã ẩn, kèm `answer`, `documentId`, `page`, `active` |
+| `question.create` (UC23) | CONTENT_ADMIN | `{ "topicId", "content" (≤ 200), "answer" (≤ 5000), "documentId", "page", "sortOrder"?, "active"? }` | câu hỏi |
+| `question.update` (UC23) | CONTENT_ADMIN | `{ "id", …các trường như trên }` | câu hỏi |
+| `question.hide` (UC23) | CONTENT_ADMIN | `{ "id" }` | `{}` — đặt `is_active = false` |
 | `document.list` (UC07) | USER | `{ "q"?, "page", "size" }` — tìm theo tiêu đề | trang `{ "id", "title", "mimeType", "pageCount", "uploadedBy", "createdAt" }` |
 | `document.get` | USER | `{ "id" }` | một tài liệu |
 | `document.download` (UC08) | USER | `{ "id" }` | `{ "fileName", "mimeType", "size", "contentBase64" }` |
@@ -424,7 +424,7 @@ client/                                # Java Swing desktop — View (+ Controll
     ├── common/
     │   ├── net/                       # SocketClient, FrameCodec, ApiError, PageResult — tầng mạng TCP
     │   └── view/                      # MainFrame (tab theo vai), Async (SwingWorker), FileOpener, Ui
-    ├── account/  {model, controller, view}   # M1 · LoginPanel, ChangePasswordDialog
+    ├── account/  {model, controller, view}   # M1 · LoginPanel, ProfileDialog, ChangePasswordDialog
     ├── chat/     {model, controller, view}   # M2 · ChatPanel
     ├── content/  {model, controller, view}   # M3 · DocumentsPanel, ContentPanel
     └── admin/    {model, controller, view}   # M4 · UsersPanel, HealthPanel

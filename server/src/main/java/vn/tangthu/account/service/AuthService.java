@@ -11,7 +11,7 @@ import vn.tangthu.account.model.User;
 import vn.tangthu.account.repository.UserRepository;
 import vn.tangthu.common.security.JwtService;
 
-/** M1 · Tài khoản: UC01, UC03, UC04. UC02 (đăng xuất) chỉ xóa token ở client. */
+/** M1 · Tài khoản: UC01, UC03, UC04. UC02 (đăng xuất): client bỏ token và đóng kết nối TCP. */
 @Service
 public class AuthService {
     private static final String BAD_LOGIN = "Thông tin đăng nhập không đúng.";

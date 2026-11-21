@@ -32,7 +32,7 @@ src/main/java/vn/tangthu/client/
 │   │   └── PageResult           một trang kết quả
 │   └── view/                    MainFrame (đăng nhập ↔ tab theo vai), Async (gọi mạng bằng SwingWorker,
 │                                không treo giao diện), FileOpener (mở tệp nguồn), Ui
-├── account/   M1 · Tài khoản    model/ controller/ view/   LoginPanel, ChangePasswordDialog
+├── account/   M1 · Tài khoản    model/ controller/ view/   LoginPanel, ProfileDialog, ChangePasswordDialog
 ├── chat/      M2 · Hỏi đáp      model/ controller/ view/   ChatPanel
 ├── content/   M3 · Nội dung     model/ controller/ view/   DocumentsPanel, ContentPanel
 └── admin/     M4 · Quản trị     model/ controller/ view/   UsersPanel, HealthPanel

@@ -359,22 +359,22 @@ tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục t�
 
 ## Phụ lục A. Ma trận truy vết
 
-| Use case | Module | API (`DAC-TA-TRIEN-KHAI.md` mục 6) | Bảng | Quy tắc |
+| Use case | Module | Action socket (`DAC-TA-TRIEN-KHAI.md` mục 6) | Bảng | Quy tắc |
 |---|---|---|---|---|
-| UC01 Đăng nhập | M1 | `POST /api/auth/login` | users | BR01 |
-| UC02 Đăng xuất | M1 | — (client) | — | — |
-| UC03 Xem thông tin cá nhân | M1 | `GET /api/auth/me` | users | BR02 |
-| UC04 Đổi mật khẩu | M1 | `PUT /api/auth/password` | users | BR02 |
-| UC05 Chọn câu hỏi, nhận trả lời | M2 | `GET /api/topics`, `GET /api/topics/{id}/questions`, `POST /api/chat` | topics, questions, documents, conversations, messages | BR05, BR06 |
-| UC06 Xem lại hội thoại | M2 | `GET /api/conversations`, `GET /api/conversations/{id}` | conversations, messages, questions | BR05 |
-| UC08 Xem nguồn trích dẫn | M2 | `GET /api/documents/{id}/file` | documents | BR05 |
-| UC07 Tra cứu kho tài liệu | M3 | `GET /api/documents` | documents | — |
-| UC10 Tải lên tài liệu | M3 | `POST /api/documents` | documents | BR03 |
-| UC11 Sửa thông tin tài liệu | M3 | `PATCH /api/documents/{id}` | documents | BR03 |
-| UC12 Gỡ tài liệu | M3 | `DELETE /api/documents/{id}` | documents, questions | BR03, BR06 |
-| UC22 Quản lý chủ đề | M3 | `POST/PATCH/DELETE /api/topics` | topics | BR03 |
-| UC23 Quản lý câu hỏi – câu trả lời | M3 | `GET /api/admin/questions`, `POST/PATCH/DELETE /api/questions` | questions | BR03, BR06 |
-| UC14 Tra cứu người dùng | M4 | `GET /api/users` | users | BR03 |
-| UC15 Khóa / mở tài khoản | M4 | `PATCH /api/users/{id}` | users | BR02, BR04 |
-| UC16 Phân quyền | M4 | `PATCH /api/users/{id}` | users | BR02, BR04 |
-| UC20 Kiểm tra trạng thái hệ thống | M4 | `GET /api/health` | — | BR03 |
+| UC01 Đăng nhập | M1 | `auth.login` | users | BR01 |
+| UC02 Đăng xuất | M1 | — (client đóng kết nối TCP) | — | — |
+| UC03 Xem thông tin cá nhân | M1 | `auth.me` | users | BR02 |
+| UC04 Đổi mật khẩu | M1 | `auth.changePassword` | users | BR02 |
+| UC05 Chọn câu hỏi, nhận trả lời | M2 | `topic.list`, `topic.questions`, `chat.ask` | topics, questions, documents, conversations, messages | BR05, BR06 |
+| UC06 Xem lại hội thoại | M2 | `conversation.list`, `conversation.get` | conversations, messages, questions | BR05 |
+| UC08 Xem nguồn trích dẫn | M2 | `document.download` | documents | BR05 |
+| UC07 Tra cứu kho tài liệu | M3 | `document.list`, `document.get` | documents | — |
+| UC10 Tải lên tài liệu | M3 | `document.upload` | documents | BR03 |
+| UC11 Sửa thông tin tài liệu | M3 | `document.rename` | documents | BR03 |
+| UC12 Gỡ tài liệu | M3 | `document.delete` | documents, questions | BR03, BR06 |
+| UC22 Quản lý chủ đề | M3 | `topic.create`, `topic.update`, `topic.delete` | topics | BR03 |
+| UC23 Quản lý câu hỏi – câu trả lời | M3 | `question.listForEditor`, `question.create`, `question.update`, `question.hide` | questions | BR03, BR06 |
+| UC14 Tra cứu người dùng | M4 | `user.list` | users | BR03 |
+| UC15 Khóa / mở tài khoản | M4 | `user.update {active}` | users | BR02, BR04 |
+| UC16 Phân quyền | M4 | `user.update {role}` | users | BR02, BR04 |
+| UC20 Kiểm tra trạng thái hệ thống | M4 | `system.health`, `system.ping` | — | BR03 |

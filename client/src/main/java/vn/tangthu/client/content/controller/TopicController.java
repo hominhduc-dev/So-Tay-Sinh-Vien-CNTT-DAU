@@ -7,7 +7,7 @@ import vn.tangthu.client.common.net.SocketClient;
 import vn.tangthu.client.content.model.QuestionButton;
 import vn.tangthu.client.content.model.Topic;
 
-/** M3 · Nội dung — chủ đề (UC07 xem, UC23 quản lý). */
+/** M3 · Nội dung — chủ đề (UC07 xem, UC22 quản lý). */
 public class TopicController {
     private final SocketClient client;
 

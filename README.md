@@ -147,7 +147,7 @@ Wireshark với bộ lọc `tcp.port == 9090`.
 │       ├── common/
 │       │   ├── net/                      SocketClient, FrameCodec — tầng mạng
 │       │   └── view/                     MainFrame (tab theo vai), Async, FileOpener
-│       ├── account/                      M1 · LoginPanel, ChangePasswordDialog
+│       ├── account/                      M1 · LoginPanel, ProfileDialog, ChangePasswordDialog
 │       ├── chat/                         M2 · ChatPanel
 │       ├── content/                      M3 · DocumentsPanel, ContentPanel
 │       └── admin/                        M4 · UsersPanel, HealthPanel
@@ -180,7 +180,7 @@ Mỗi thành viên phụ trách trọn **một module ở cả server và client
 | Tệp | Nội dung |
 |---|---|
 | [`docs/reports/bao-cao-so-tay-sinh-vien-cntt.docx`](docs/reports/bao-cao-so-tay-sinh-vien-cntt.docx) | Báo cáo phân tích và thiết kế hệ thống |
-| [`docs/diagrams/so-do-he-thong.drawio`](docs/diagrams/so-do-he-thong.drawio) | Bộ sơ đồ hệ thống tổng hợp trong một file nhiều trang |
+| [`docs/diagrams/so-do-he-thong.drawio`](docs/diagrams/so-do-he-thong.drawio) | 31 trang sơ đồ: use case, BFD, ngữ cảnh, **kiến trúc TCP socket**, **cấu trúc MVC client – server**, ERD, **vòng đời kết nối TCP**, tuần tự UC01–UC23 (theo action socket), sơ đồ lớp |
 | [`docs/SRS.md`](docs/SRS.md) | Đặc tả yêu cầu phần mềm: phạm vi, tác nhân, 17 use case, yêu cầu dữ liệu, giao diện, phi chức năng, quy tắc nghiệp vụ, ma trận truy vết |
 | [`docs/DAC-TA-TRIEN-KHAI.md`](docs/DAC-TA-TRIEN-KHAI.md) | Đặc tả triển khai: lược đồ CSDL, **giao thức TCP socket** (mục 6), luồng xử lý, hiện thực server / client, kịch bản kiểm thử |
 | [`docs/slides/SRS-tac-nhan-va-use-case.pptx`](docs/slides/SRS-tac-nhan-va-use-case.pptx) | Slide SRS: tác nhân, use case, ma trận quyền, input / output, luồng |

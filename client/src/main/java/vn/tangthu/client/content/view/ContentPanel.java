@@ -36,7 +36,7 @@ import vn.tangthu.client.content.model.Document;
 import vn.tangthu.client.content.model.Question;
 import vn.tangthu.client.content.model.Topic;
 
-/** Giáo vụ soạn nội dung: chủ đề (UC23) và câu hỏi – câu trả lời gắn nguồn (UC22). */
+/** Giáo vụ soạn nội dung: chủ đề (UC22) và câu hỏi – câu trả lời gắn nguồn (UC23). */
 public class ContentPanel extends JPanel {
     private final TopicController topics;
     private final QuestionController questions;

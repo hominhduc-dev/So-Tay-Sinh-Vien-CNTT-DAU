@@ -6,7 +6,7 @@ import java.util.UUID;
 import vn.tangthu.client.common.net.SocketClient;
 import vn.tangthu.client.content.model.Question;
 
-/** M3 · Nội dung — UC22 soạn câu hỏi và câu trả lời, gắn tài liệu nguồn. */
+/** M3 · Nội dung — UC23 soạn câu hỏi và câu trả lời, gắn tài liệu nguồn. */
 public class QuestionController {
     private final SocketClient client;
 

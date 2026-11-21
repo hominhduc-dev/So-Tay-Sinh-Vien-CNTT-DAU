@@ -2,7 +2,7 @@
 
 **Người phụ trách:** _Họ tên — @github_
 
-**Use case:** UC07 Tra cứu tài liệu, UC10–UC12 Tải lên / sửa / gỡ tài liệu, UC22 Câu hỏi – câu trả lời, UC23 Chủ đề
+**Use case:** UC07 Tra cứu tài liệu, UC10–UC12 Tải lên / sửa / gỡ tài liệu, UC22 Quản lý chủ đề, UC23 Quản lý câu hỏi – câu trả lời
 
 **Action gửi tới server:** `topic.*`, `question.*`, `document.*`
 

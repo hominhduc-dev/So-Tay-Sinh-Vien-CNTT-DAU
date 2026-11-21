@@ -10,7 +10,7 @@ import vn.tangthu.client.account.controller.AuthController;
 import vn.tangthu.client.common.view.Async;
 import vn.tangthu.client.common.view.Ui;
 
-/** UC03 — đổi mật khẩu. */
+/** UC04 — đổi mật khẩu. */
 public final class ChangePasswordDialog {
     private ChangePasswordDialog() {}
 
