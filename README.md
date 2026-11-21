@@ -118,11 +118,13 @@ hỏi, câu hỏi đã ẩn, hội thoại của người khác, tải trùng t�
 .
 ├── server-java/                 Server Spring Boot
 │   └── src/main/java/vn/tangthu/
-│       ├── common/              JWT, phân quyền, xử lý lỗi, lưu tệp
-│       ├── account/             M1 · Tài khoản      UC01–UC04
-│       ├── chat/                M2 · Hỏi đáp        UC05, UC06
-│       ├── content/             M3 · Nội dung       UC07, UC08, UC10–UC12, UC22, UC23
-│       └── admin/               M4 · Quản trị       UC14–UC16, UC20
+│       ├── controller/          C · nhận request REST, kiểm tra quyền, trả JSON
+│       ├── service/             nghiệp vụ (quy tắc, transaction)
+│       ├── repository/          truy vấn CSDL (Spring Data JPA)
+│       ├── model/               M · 6 entity + Role
+│       ├── dto/                 V · dữ liệu request / response JSON
+│       ├── config/ security/    cấu hình, JWT, phân quyền
+│       └── exception/ util/     xử lý lỗi, lưu tệp
 ├── web/                         Web client Next.js
 │   └── src/features/            auth, chat, documents, content, admin
 ├── docs/                        SRS, đặc tả triển khai, slide, ảnh chụp

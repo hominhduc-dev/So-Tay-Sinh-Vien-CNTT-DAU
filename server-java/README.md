@@ -6,11 +6,16 @@ Hiện thực theo [`docs/DAC-TA-TRIEN-KHAI.md`](../docs/DAC-TA-TRIEN-KHAI.md) v
 
 ```
 src/main/java/vn/tangthu/
-├── common/    cấu hình, JWT, bảo mật, xử lý lỗi, lưu tệp
-├── account/   M1 · Tài khoản      — UC01–UC04
-├── chat/      M2 · Hỏi đáp        — UC05, UC06
-├── content/   M3 · Nội dung       — UC07, UC08, UC10–UC12, UC22, UC23
-└── admin/     M4 · Quản trị       — UC14–UC16, UC20
+├── TangThuApplication.java
+├── controller/  Controller — Auth (M1), Chat (M2), Topic/Question/Document (M3), Admin/Health (M4)
+├── service/     nghiệp vụ, gọi repository
+├── repository/  Spring Data JPA
+├── model/       Model — User, Role, Topic, Question, Document, Conversation, Message
+├── dto/         View — record request / response JSON (UserDto, ContentDtos, ChatDtos, *Request…)
+├── config/      SecurityConfig, AppProperties
+├── security/    JwtService, JwtAuthFilter, AuthUser
+├── exception/   ApiException, GlobalExceptionHandler
+└── util/        FileStorage
 src/main/resources/db/
 ├── migration/ V1__init.sql — lược đồ 6 bảng
 └── demo/      V2__demo_data.sql — 3 tài khoản demo, 6 chủ đề

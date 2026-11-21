@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayOutputStream;
@@ -32,9 +31,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import vn.tangthu.account.Role;
-import vn.tangthu.account.User;
-import vn.tangthu.account.UserRepository;
+import vn.tangthu.model.Role;
+import vn.tangthu.model.User;
+import vn.tangthu.repository.UserRepository;
 
 /**
  * Kiểm thử tích hợp theo docs/DAC-TA-TRIEN-KHAI.md mục 9.
