@@ -125,7 +125,8 @@ Quyền kế thừa: Giáo vụ có mọi quyền của Sinh viên; Quản trị
 
 ## 3. Yêu cầu chức năng
 
-Mỗi use case ghi: tác nhân, tiền điều kiện, luồng chính, luồng thay thế / ngoại lệ, hậu điều kiện.
+Mỗi use case ghi: tác nhân, tiền điều kiện, luồng chính, luồng thay thế / ngoại lệ, hậu điều kiện. Bản đầy đủ từng bước,
+kèm action socket, mã lỗi và sơ đồ hoạt động / tuần tự: [`DAC-TA-USE-CASE.md`](DAC-TA-USE-CASE.md).
 Mọi use case trừ UC01 có tiền điều kiện chung **"đã đăng nhập, token hợp lệ, tài khoản đang hoạt động
 và thuộc khoa CNTT"** (BR01, BR02); không thỏa → hệ thống trả lỗi xác thực, client chuyển về trang đăng nhập.
 API tương ứng ghi ở [`DAC-TA-TRIEN-KHAI.md`](DAC-TA-TRIEN-KHAI.md) mục 6.
@@ -140,13 +141,13 @@ API tương ứng ghi ở [`DAC-TA-TRIEN-KHAI.md`](DAC-TA-TRIEN-KHAI.md) mục 6
   1. Người dùng nhập mã sinh viên / cán bộ hoặc email (≤ 255 ký tự) và mật khẩu.
   2. Hệ thống kiểm tra thông tin, trạng thái hoạt động và đơn vị CNTT.
   3. Hệ thống cấp token (hiệu lực 8 giờ), trả thông tin người dùng và vai.
-  4. Client chuyển tới trang theo vai: khung chat (Sinh viên), trang nội dung (Giáo vụ), trang quản trị (Quản trị viên).
+  4. Client hiện các tab theo vai: Hỏi đáp, Tài liệu (mọi vai); Soạn nội dung (Giáo vụ trở lên); Tài khoản, Hệ thống (Quản trị viên).
 - **Ngoại lệ:** 2a. Sai mật khẩu, tài khoản khóa hoặc không thuộc CNTT → báo "Thông tin đăng nhập không đúng", không nói rõ lý do.
 - **Hậu điều kiện:** client giữ kết nối TCP và token để gửi kèm các yêu cầu sau.
 
 **UC02 — Đăng xuất**
 
-- **Luồng chính:** người dùng bấm Đăng xuất; client xóa token và về trang đăng nhập. Không gọi server.
+- **Luồng chính:** người dùng bấm Đăng xuất; client xóa token, đóng kết nối TCP và về màn đăng nhập. Không có action đăng xuất; server nhận EOF và giải phóng luồng.
 
 **UC03 — Xem thông tin cá nhân**
 
@@ -187,7 +188,7 @@ API tương ứng ghi ở [`DAC-TA-TRIEN-KHAI.md`](DAC-TA-TRIEN-KHAI.md) mục 6
 
 **UC08 — Xem nguồn trích dẫn**
 
-- **Luồng chính:** người dùng bấm nguồn của một câu trả lời; hệ thống trả tệp gốc; client mở PDF tại đúng trang được dẫn (DOCX: mở / tải về).
+- **Luồng chính:** người dùng bấm nguồn của một câu trả lời; hệ thống trả tệp gốc (base64 trong khung JSON); client ghi tệp tạm, mở bằng ứng dụng mặc định và báo số trang được dẫn.
 - **Ngoại lệ:** tài liệu không tồn tại → báo không tìm thấy.
 
 ### 3.3. M3 · Nội dung
