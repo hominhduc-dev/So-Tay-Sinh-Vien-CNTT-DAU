@@ -165,7 +165,7 @@ Wireshark với bộ lọc `tcp.port == 9090`.
 
 ## Phân công module
 
-Mỗi thành viên phụ trách trọn **một module ở cả server và client**.
+Mỗi thành viên phụ trách trọn **một module ở cả server và client**. Quy trình clone → tạo nhánh → Pull Request: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Module | Use case | Server | Client | Người phụ trách |
 |---|---|---|---|---|
