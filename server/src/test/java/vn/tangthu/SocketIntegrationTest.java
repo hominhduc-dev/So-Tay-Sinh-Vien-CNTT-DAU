@@ -303,6 +303,16 @@ class SocketIntegrationTest {
         client.ok("document.delete", gv, Map.of("id", free));
     }
 
+    @Test @DisplayName("UC11. Đổi tên tài liệu yêu cầu tiêu đề từ 3 đến 500 ký tự")
+    void renameDocumentTitleLength() throws Exception {
+        String gv = token("GV1");
+        String[] c = content(gv);
+        client.fails("document.rename", gv, Map.of("id", c[1], "title", "ab"), "VALIDATION_ERROR");
+        client.fails("document.rename", gv, Map.of("id", c[1], "title", "a".repeat(501)), "VALIDATION_ERROR");
+        assertThat(client.ok("document.rename", gv, Map.of("id", c[1], "title", "Quy chế mới"))
+                .get("title").asText()).isEqualTo("Quy chế mới");
+    }
+
     @Test @DisplayName("11. Xóa chủ đề còn câu hỏi → TOPIC_NOT_EMPTY; trùng tên → TOPIC_NAME_TAKEN")
     void topicNotEmpty() throws Exception {
         String gv = token("GV1");

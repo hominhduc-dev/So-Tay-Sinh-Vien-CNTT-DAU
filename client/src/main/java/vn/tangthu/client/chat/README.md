@@ -13,3 +13,5 @@
 | `view/` | View — màn hình Swing | ChatPanel |
 
 Phía server: [`server/src/main/java/vn/tangthu/chat/`](../../../../../../../../server/src/main/java/vn/tangthu/chat/).
+
+Nguồn PDF trong câu trả lời mở tại đúng trang được trích dẫn.

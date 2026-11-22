@@ -3,6 +3,7 @@ package vn.tangthu.client.chat.view;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.UUID;
 import javax.swing.BorderFactory;
@@ -28,6 +29,7 @@ import vn.tangthu.client.common.view.Async;
 import vn.tangthu.client.common.view.FileOpener;
 import vn.tangthu.client.common.view.Ui;
 import vn.tangthu.client.content.controller.DocumentController;
+import vn.tangthu.client.content.model.DownloadedFile;
 import vn.tangthu.client.content.controller.TopicController;
 import vn.tangthu.client.content.model.QuestionButton;
 import vn.tangthu.client.content.model.Topic;
@@ -214,8 +216,21 @@ public class ChatPanel extends JPanel {
     }
 
     private void openSource(UUID documentId, int page) {
-        Async.run(this, () -> documents.download(documentId), f -> FileOpener.open(this, f, page));
+        Async.run(this, () -> {
+            DownloadedFile file = documents.download(documentId);
+            BufferedImage image = "application/pdf".equals(file.mimeType())
+                    ? CitationPdfViewer.renderPage(file.content(), page) : null;
+            return new CitationPreview(file, image);
+        }, preview -> {
+            if (preview.pageImage() == null) {
+                FileOpener.open(this, preview.file(), page);
+            } else {
+                CitationPdfViewer.show(this, preview.file().fileName(), page, preview.pageImage());
+            }
+        });
     }
+
+    private record CitationPreview(DownloadedFile file, BufferedImage pageImage) {}
 
     private void append(Message m) {
         appendNoRender(m);

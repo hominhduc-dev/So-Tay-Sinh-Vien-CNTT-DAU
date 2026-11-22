@@ -66,7 +66,9 @@ public class DocumentSocketController implements SocketController {
         });
         routes.secured("document.rename", Role.CONTENT_ADMIN, r -> {
             RenameRequest req = r.body(RenameRequest.class);
-            if (req.title() == null || req.title().isBlank()) throw ApiException.validation("Tiêu đề 3–500 ký tự.");
+            if (req.title() == null || req.title().trim().length() < 3 || req.title().trim().length() > 500) {
+                throw ApiException.validation("Tiêu đề 3–500 ký tự.");
+            }
             return documents.rename(r.uuid("id"), req.title());
         });
         routes.secured("document.delete", Role.CONTENT_ADMIN, r -> {
