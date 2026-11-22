@@ -1,7 +1,6 @@
 package vn.tangthu.account.service;
 
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,7 +11,7 @@ import vn.tangthu.account.model.User;
 import vn.tangthu.account.repository.UserRepository;
 import vn.tangthu.common.security.JwtService;
 
-/** M1 · Tài khoản: UC01, UC03, UC04. UC02 (đăng xuất) chỉ xóa token ở client. */
+/** M1 · Tài khoản: UC01, UC03, UC04. UC02 (đăng xuất): client bỏ token và đóng kết nối TCP. */
 @Service
 public class AuthService {
     private static final String BAD_LOGIN = "Thông tin đăng nhập không đúng.";
@@ -53,7 +52,7 @@ public class AuthService {
     public void changePassword(UUID userId, String current, String next) {
         User u = users.findById(userId).orElseThrow(() -> ApiException.unauthorized("Cần đăng nhập."));
         if (!encoder.matches(current, u.getPasswordHash())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "WRONG_PASSWORD", "Mật khẩu hiện tại không đúng.");
+            throw new ApiException("WRONG_PASSWORD", "Mật khẩu hiện tại không đúng.");
         }
         u.changePassword(encoder.encode(next));
     }

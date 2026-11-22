@@ -1,31 +1,63 @@
-# Web client — Sổ Tay Sinh Viên CNTT
+# Client — Sổ Tay Sinh Viên CNTT
 
-Next.js 16 · React 19 · Tailwind 4. Gọi API Spring Boot ở [`../server`](../server/README.md)
-qua đường dẫn tương đối `/api` — `next.config.ts` chuyển tiếp sang server, nên trình duyệt ở máy nào
-trong LAN cũng gọi đúng mà không vướng CORS.
+Ứng dụng **desktop Java Swing**. Kết nối tới server bằng **TCP socket** (`java.net.Socket`), giữ một kết
+nối suốt phiên đăng nhập; mỗi thao tác gửi một khung `[4 byte độ dài][JSON]` và nhận một khung phản hồi.
 
-| Trang | Vai | Use case |
+![Khung chat](../docs/images/chat.png)
+
+## Chạy
+
+Cần Java 21 (chạy) và Maven 3.9 (build).
+
+```bash
+cd client
+mvn package                                   # → target/tangthu-client.jar (đã gồm thư viện)
+java -jar target/tangthu-client.jar           # máy chủ localhost:9090
+java -jar target/tangthu-client.jar 192.168.1.10 9090   # máy chủ khác trong LAN
+```
+
+Cũng đổi được IP / cổng ngay ở màn đăng nhập, hoặc đặt biến môi trường `TANGTHU_HOST`, `TANGTHU_PORT`.
+
+## Cấu trúc — module trước, tầng MVC sau
+
+```
+src/main/java/vn/tangthu/client/
+├── App.java                     main: đọc IP / cổng, bật giao diện FlatLaf
+├── common/
+│   ├── net/                     tầng mạng TCP
+│   │   ├── SocketClient         mở Socket, gửi { id, action, token, data }, chờ phản hồi cùng id,
+│   │   │                        tự nối lại khi mất kết nối; synchronized — nhiều luồng dùng chung an toàn
+│   │   ├── FrameCodec           đóng / tách khung (giống hệt phía server)
+│   │   ├── ApiError             lỗi server trả về hoặc NETWORK_ERROR
+│   │   └── PageResult           một trang kết quả
+│   └── view/                    MainFrame (đăng nhập ↔ tab theo vai), Async (gọi mạng bằng SwingWorker,
+│                                không treo giao diện), FileOpener (mở tệp nguồn), Ui
+├── account/   M1 · Tài khoản    model/ controller/ view/   LoginPanel, ProfileDialog, ChangePasswordDialog
+├── chat/      M2 · Hỏi đáp      model/ controller/ view/   ChatPanel
+├── content/   M3 · Nội dung     model/ controller/ view/   DocumentsPanel, ContentPanel
+└── admin/     M4 · Quản trị     model/ controller/ view/   UsersPanel, HealthPanel
+```
+
+| Tầng | Thư mục | Vai trò |
 |---|---|---|
-| `/login` | mọi vai | UC01 |
-| `/chat` | mọi vai | UC05 chọn chủ đề → câu hỏi, UC06 lịch sử, UC08 mở nguồn đúng trang |
-| `/documents` | mọi vai đọc; giáo vụ tải lên, đổi tên, gỡ | UC07, UC08, UC10–UC12 |
-| `/content` | giáo vụ, quản trị viên | UC22 chủ đề, UC23 câu hỏi – câu trả lời |
-| `/admin/users`, `/admin/health`, `/admin/permissions` | quản trị viên | UC14–UC16, UC20 |
+| **Model** | `<module>/model/` | `record` Java nhận từ JSON (Jackson) |
+| **Controller** | `<module>/controller/` | Mỗi phương thức gửi một action qua `SocketClient` — ví dụ `ChatController.ask` → `chat.ask` |
+| **View** | `<module>/view/` | Màn hình Swing; gọi controller qua `Async.run(...)` |
 
-## Chạy khi phát triển
+## Tab theo vai
+
+| Tab | Sinh viên | Giáo vụ | Quản trị viên |
+|---|:-:|:-:|:-:|
+| Hỏi đáp — chọn chủ đề, bấm câu hỏi, mở nguồn, xem lại hội thoại | ✓ | ✓ | ✓ |
+| Tài liệu — tìm, mở; giáo vụ thêm tải lên / đổi tên / gỡ | ✓ | ✓ | ✓ |
+| Soạn nội dung — chủ đề, câu hỏi – câu trả lời gắn nguồn | | ✓ | ✓ |
+| Tài khoản — tìm, khóa / mở, đổi vai | | | ✓ |
+| Hệ thống — trạng thái server, CSDL, độ trễ ping TCP | | | ✓ |
+
+Ẩn tab chỉ để gọn giao diện; quyền thật luôn được server kiểm ở mỗi yêu cầu.
+
+## Kiểm thử
 
 ```bash
-# server đang chạy ở :8080
-npm install
-npm run dev            # http://localhost:3000
+mvn test    # SocketClientTest: server giả trên cổng ngẫu nhiên — gửi / nhận khung, tiếng Việt, lỗi, mất mạng
 ```
-
-Đổi địa chỉ server bằng `API_INTERNAL_URL` (xem `.env.local.example`).
-
-## Kiểm tra
-
-```bash
-npm run typecheck && npm run lint && npm run build
-```
-
-Font đóng gói qua `@fontsource`, không tải từ Google — build và chạy được trong LAN không có Internet.

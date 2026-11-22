@@ -1,13 +1,19 @@
-# Server Spring Boot — Sổ Tay Sinh Viên CNTT
+# Server — Sổ Tay Sinh Viên CNTT
 
-Hiện thực theo [`docs/DAC-TA-TRIEN-KHAI.md`](../docs/DAC-TA-TRIEN-KHAI.md) và [`docs/SRS.md`](../docs/SRS.md).
+Máy chủ **TCP socket** viết bằng Java 21 + Spring Boot 3.3 (chế độ không web). Client desktop kết nối
+thẳng vào cổng **9090** bằng `java.net.Socket`; giao thức ở
+[`docs/DAC-TA-TRIEN-KHAI.md` mục 6](../docs/DAC-TA-TRIEN-KHAI.md#6-giao-thức-tcp-socket).
 
 ## Cấu trúc — module trước, tầng MVC sau
 
 ```
 src/main/java/vn/tangthu/
 ├── TangThuApplication.java
-├── common/      dùng chung: config/ security/ exception/ dto/ util/
+├── common/
+│   ├── socket/  tầng mạng: SocketServer (ServerSocket + pool luồng), ClientConnection (một client),
+│   │            FrameCodec (4 byte độ dài + JSON), SocketDispatcher (action → controller, kiểm quyền),
+│   │            SocketController, SocketRequest
+│   └── config/ security/ exception/ dto/ util/
 ├── account/     M1 · Tài khoản   UC01–UC04          model/ repository/ service/ controller/ dto/
 ├── chat/        M2 · Hỏi đáp     UC05, UC06         model/ repository/ service/ controller/ dto/
 ├── content/     M3 · Nội dung    UC07, UC08, UC10–UC12, UC22, UC23
@@ -21,11 +27,17 @@ src/main/resources/db/
 | Tầng MVC | Thư mục | Vai trò |
 |---|---|---|
 | **M**odel | `model/`, `repository/` | Entity JPA ánh xạ bảng; truy vấn CSDL |
-| **C**ontroller | `controller/` | Nhận request REST, kiểm tra quyền (`@PreAuthorize`), gọi service, trả JSON |
+| **C**ontroller | `controller/` | Đăng ký action socket (`routes.secured("chat.ask", Role.USER, …)`), đọc `data`, gọi service |
 | (nghiệp vụ) | `service/` | Quy tắc nghiệp vụ BR01–BR06, transaction |
-| **V**iew | `dto/` → JSON; giao diện ở `client/` | Dữ liệu trả về client; client hiển thị |
+| **V**iew | `dto/` → JSON trong khung phản hồi; giao diện ở `client/` | Dữ liệu trả về client; client Swing hiển thị |
 
-Mỗi module có file `README.md` riêng ghi use case và người phụ trách.
+## Luồng một yêu cầu
+
+```
+ServerSocket.accept() ─▶ ClientConnection (luồng riêng) ─▶ FrameCodec.read ─▶ SocketDispatcher.handle
+   ─▶ kiểm token + đọc lại user từ CSDL (BR01, BR02) ─▶ kiểm vai ─▶ <Module>SocketController ─▶ Service
+   ─▶ { id, ok, data | error } ─▶ FrameCodec.write ─▶ chờ khung tiếp theo trên cùng socket
+```
 
 ## Chạy bằng Docker Compose (từ thư mục gốc repo)
 
@@ -34,14 +46,12 @@ cp .env.example .env      # rồi sửa DB_PASSWORD, JWT_SECRET
 docker compose up --build
 ```
 
-Web ở `http://localhost:3000`, API ở `http://localhost:8080/api`.
-
 ## Chạy trực tiếp (cần Java 21, Maven, PostgreSQL 16)
 
 ```bash
 # CSDL: tạo user/database tangthu (mật khẩu tangthu) hoặc đặt DATABASE_URL, DB_USER, DB_PASSWORD
 export JWT_SECRET="chuoi-ngau-nhien-dai-it-nhat-32-ky-tu"
-mvn spring-boot:run
+mvn spring-boot:run       # log: "Máy chủ TCP socket lắng nghe ở cổng 9090"
 ```
 
 | Biến môi trường | Mặc định | Ý nghĩa |
@@ -50,10 +60,13 @@ mvn spring-boot:run
 | `DB_USER`, `DB_PASSWORD` | `tangthu` / `tangthu` | Tài khoản CSDL |
 | `JWT_SECRET` | — (bắt buộc) | Khóa ký token, ≥ 32 ký tự |
 | `JWT_TTL` | `PT8H` | Thời hạn token |
+| `SOCKET_PORT` | `9090` | Cổng TCP lắng nghe |
+| `SOCKET_THREADS` | `64` | Số client phục vụ đồng thời |
+| `SOCKET_IDLE_TIMEOUT` | `PT30M` | Đóng kết nối im lặng quá lâu |
 | `STORAGE_DIR` | `./storage` | Thư mục lưu tệp tài liệu |
-| `CORS_ORIGINS` | `*` | Origin được phép gọi API (mẫu, cách nhau bằng dấu phẩy) |
 | `FLYWAY_LOCATIONS` | `classpath:db/migration,classpath:db/demo` | Bỏ `db/demo` khi triển khai thật |
-| `PORT` | `8080` | Cổng HTTP |
+
+Máy chủ trong LAN: mở cổng 9090 trên tường lửa để máy khác kết nối.
 
 ## Tài khoản demo
 
@@ -65,24 +78,31 @@ Mật khẩu chung `Matkhau@123` — chỉ dùng thử, đổi ngay khi triển 
 | `GV001` / `giaovu@tangthu.local` | Giáo vụ (`CONTENT_ADMIN`) |
 | `QTV001` / `quantri@tangthu.local` | Quản trị viên (`SYSTEM_ADMIN`) |
 
-Có sẵn 6 chủ đề nhưng chưa có câu hỏi: giáo vụ tải tài liệu (UC10) rồi soạn câu hỏi (UC23).
+## Thử nhanh không cần client
 
-## Thử nhanh bằng curl
+Gửi một khung bằng Python (4 byte độ dài + JSON):
 
 ```bash
-TOKEN=$(curl -s -X POST localhost:8080/api/auth/login -H 'Content-Type: application/json' \
-  -d '{"login":"GV001","password":"Matkhau@123"}' | jq -r .token)
-curl -s localhost:8080/api/topics -H "Authorization: Bearer $TOKEN"
-curl -s -X POST localhost:8080/api/documents -H "Authorization: Bearer $TOKEN" \
-  -F "file=@quy-che.pdf;type=application/pdf" -F "title=Quy chế đào tạo"
+python3 - <<'PY'
+import json, socket, struct
+s = socket.create_connection(("localhost", 9090))
+def call(msg):
+    b = json.dumps(msg).encode()
+    s.sendall(struct.pack(">I", len(b)) + b)
+    n = struct.unpack(">I", s.recv(4, socket.MSG_WAITALL))[0]
+    return json.loads(s.recv(n, socket.MSG_WAITALL))
+r = call({"id": 1, "action": "auth.login", "data": {"login": "SV001", "password": "Matkhau@123"}})
+print(call({"id": 2, "action": "topic.list", "token": r["data"]["token"]}))
+PY
 ```
 
 ## Kiểm thử
 
-Kiểm thử tích hợp (`ApiIntegrationTest`, 15 ca theo mục 9 của đặc tả) chạy trên PostgreSQL thật:
+`SocketIntegrationTest` — 19 ca: 4 ca giao thức (nhiều yêu cầu trên một kết nối, khung hỏng, khung quá lớn,
+10 client đồng thời) và 15 ca nghiệp vụ theo mục 9 của đặc tả. Server mở cổng ngẫu nhiên, test nối bằng
+socket thật, CSDL PostgreSQL thật:
 
 ```bash
-# CSDL riêng cho test, sẽ bị xóa dữ liệu mỗi ca
 createdb -O tangthu tangthu_test     # hoặc đặt TEST_DATABASE_URL, TEST_DB_USER, TEST_DB_PASSWORD
 mvn test
 ```

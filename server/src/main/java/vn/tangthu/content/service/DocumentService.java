@@ -10,10 +10,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 import vn.tangthu.content.dto.ContentDtos.DocumentDto;
 import vn.tangthu.common.dto.PageResponse;
 import vn.tangthu.common.exception.ApiException;
@@ -26,6 +24,9 @@ import vn.tangthu.common.util.FileStorage;
 /** UC07, UC08, UC10, UC11, UC12. */
 @Service
 public class DocumentService {
+    /** Giới hạn kích thước tệp tải lên (UC10). */
+    public static final int MAX_BYTES = 20 * 1024 * 1024;
+
     static final String PDF = "application/pdf";
     static final String DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -74,13 +75,16 @@ public class DocumentService {
 
     /** UC10 — +upload(in file: File): void của lớp Document. */
     @Transactional
-    public DocumentDto upload(UUID uploaderId, String title, MultipartFile file) throws IOException {
-        if (file == null || file.isEmpty()) {
+    public DocumentDto upload(UUID uploaderId, String title, String fileName, byte[] content) throws IOException {
+        if (content == null || content.length == 0) {
             throw ApiException.validation("Chưa chọn tệp.");
         }
-        String mime = detect(file);
+        if (content.length > MAX_BYTES) {
+            throw new ApiException("FILE_TOO_LARGE", "Tệp vượt quá 20 MB.");
+        }
+        String mime = detect(fileName, content);
         FileStorage.Staged staged;
-        try (InputStream in = file.getInputStream()) {
+        try (InputStream in = new java.io.ByteArrayInputStream(content)) {
             staged = storage.stage(in);
         }
         try {
@@ -131,19 +135,15 @@ public class DocumentService {
     }
 
     /** Chỉ nhận PDF (bắt đầu bằng %PDF) và DOCX (tệp zip, đuôi .docx). */
-    private static String detect(MultipartFile file) throws IOException {
-        byte[] head;
-        try (InputStream in = file.getInputStream()) {
-            head = in.readNBytes(4);
-        }
-        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
-        if (head.length == 4 && head[0] == '%' && head[1] == 'P' && head[2] == 'D' && head[3] == 'F') {
+    private static String detect(String fileName, byte[] c) {
+        String name = fileName == null ? "" : fileName.toLowerCase();
+        if (c.length >= 4 && c[0] == '%' && c[1] == 'P' && c[2] == 'D' && c[3] == 'F') {
             return PDF;
         }
-        if (head.length == 4 && head[0] == 'P' && head[1] == 'K' && name.endsWith(".docx")) {
+        if (c.length >= 4 && c[0] == 'P' && c[1] == 'K' && name.endsWith(".docx")) {
             return DOCX;
         }
-        throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_FILE", "Chỉ nhận tệp PDF hoặc DOCX.");
+        throw new ApiException("UNSUPPORTED_FILE", "Chỉ nhận tệp PDF hoặc DOCX.");
     }
 
     private static int countPages(Path pdf) {

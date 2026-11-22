@@ -4,14 +4,14 @@
 
 **Use case:** UC01 Đăng nhập, UC02 Đăng xuất, UC03 Xem thông tin cá nhân, UC04 Đổi mật khẩu
 
-**API:** `POST /api/auth/login`, `GET /api/auth/me`, `PUT /api/auth/password`
+**Action socket:** `auth.login`, `auth.me`, `auth.changePassword`
 
 | Thư mục | Tầng | Lớp |
 |---|---|---|
 | `model/` | Model — entity JPA | Role, User |
 | `repository/` | Model — truy vấn CSDL | UserRepository |
 | `service/` | Nghiệp vụ | AuthService |
-| `controller/` | Controller — REST API | AuthController |
-| `dto/` | Dữ liệu request / response JSON | ChangePasswordRequest, LoginRequest, UserDto |
+| `controller/` | Controller — đăng ký action socket | AuthSocketController |
+| `dto/` | Dữ liệu `data` gửi / nhận (JSON) | ChangePasswordRequest, LoginRequest, UserDto |
 
-Giao diện (View) của module: [`client/src/modules/account/`](../../../../../../../client/src/modules/account/).
+Giao diện (View) của module: [`client/src/main/java/vn/tangthu/client/account/`](../../../../../../../client/src/main/java/vn/tangthu/client/account/).

@@ -13,5 +13,5 @@ RUN useradd --system --uid 1001 app && mkdir -p /data/storage && chown app /data
 COPY --from=build /src/target/tangthu-server-*.jar app.jar
 USER app
 ENV STORAGE_DIR=/data/storage
-EXPOSE 8080
+EXPOSE 9090
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

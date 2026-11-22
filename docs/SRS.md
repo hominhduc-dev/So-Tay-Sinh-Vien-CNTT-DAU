@@ -34,7 +34,7 @@ soạn sẵn, kèm tài liệu nguồn và số trang để tự kiểm chứng.
 - Hỏi đáp qua nút câu hỏi có sẵn, kèm nguồn; xem lại hội thoại cá nhân.
 - Kho tài liệu (PDF/DOCX) làm nguồn trích dẫn; giáo vụ soạn chủ đề và câu hỏi – câu trả lời.
 - Quản lý trạng thái và vai trò tài khoản thuộc khoa CNTT.
-- Kiểm tra trạng thái hệ thống; chạy trong mạng LAN để thực hành TCP/HTTP.
+- Kiểm tra trạng thái hệ thống; chạy trong mạng LAN để thực hành lập trình TCP/IP với socket.
 
 **Ngoài phạm vi**
 
@@ -52,7 +52,9 @@ soạn sẵn, kèm tài liệu nguồn và số trang để tự kiểm chứng.
 | Hội thoại (Conversation) | Chuỗi các lượt chọn câu hỏi của một sinh viên |
 | Tin nhắn (Message) | Một lượt chọn câu hỏi trong hội thoại |
 | Ẩn câu hỏi | Gỡ câu hỏi khỏi danh sách nút nhưng giữ lại để lịch sử còn đọc được |
-| JWT | JSON Web Token — mã xác thực client gửi kèm mỗi request |
+| JWT | JSON Web Token — mã xác thực client gửi kèm mỗi yêu cầu socket |
+| Socket | Điểm cuối kết nối TCP; client dùng `java.net.Socket`, server dùng `java.net.ServerSocket` |
+| Khung (frame) | Một thông điệp trên TCP: 4 byte độ dài + JSON UTF-8 |
 | UC, BR, NFR | Use case, quy tắc nghiệp vụ (business rule), yêu cầu phi chức năng |
 
 ### 1.4. Tổng quan tài liệu
@@ -70,8 +72,8 @@ trận truy vết.
 Sản phẩm độc lập, không tích hợp hệ thống đào tạo của trường. Ba thành phần:
 
 ```
- Trình duyệt (client) ── HTTP request / response (JSON, JWT) ──▶ Server Spring Boot ──▶ PostgreSQL
- sinh viên, giáo vụ, quản trị viên                                 + thư mục lưu tệp tài liệu
+ Client Java Swing ── TCP socket :9090 (khung JSON, JWT) ──▶ Server Java (ServerSocket) ──▶ PostgreSQL
+ sinh viên, giáo vụ, quản trị viên                              + thư mục lưu tệp tài liệu
 ```
 
 Nội dung (tài liệu, câu trả lời) do giáo vụ khoa đưa vào từ văn bản của Phòng Đào tạo và Ban chủ nhiệm
@@ -90,7 +92,7 @@ khoa CNTT; hệ thống không tự sinh nội dung.
 
 | Tác nhân | Vai | Đặc điểm | Tần suất |
 |---|---|---|---|
-| Sinh viên CNTT | `USER` | Quen dùng web và điện thoại, không cần hướng dẫn | Thường xuyên, tăng mạnh mùa đăng ký học phần, xét tốt nghiệp |
+| Sinh viên CNTT | `USER` | Quen dùng máy tính, không cần hướng dẫn | Thường xuyên, tăng mạnh mùa đăng ký học phần, xét tốt nghiệp |
 | Giáo vụ khoa CNTT | `CONTENT_ADMIN` | Nắm quy định, không chuyên kỹ thuật | Khi có văn bản mới hoặc quy định thay đổi |
 | Quản trị viên | `SYSTEM_ADMIN` | Có kiến thức kỹ thuật cơ bản | Thỉnh thoảng |
 
@@ -102,13 +104,13 @@ Quyền kế thừa: Giáo vụ có mọi quyền của Sinh viên; Quản trị
 |---|---|---|
 | Ban chủ nhiệm khoa CNTT | Giảm câu hỏi lặp lại cho giáo vụ | Chỉ nội dung dùng cho khoa CNTT (BR01, mục 1.2) |
 | Nhà trường / Phòng Đào tạo | Quy định được dẫn đúng văn bản gốc | Mỗi câu trả lời phải kèm nguồn (BR06) |
-| Giảng viên học phần Lập trình mạng | Sản phẩm minh họa client–server, HTTP, TCP | NFR-01 hiệu năng trên LAN |
+| Giảng viên học phần Lập trình mạng | Sản phẩm minh họa client–server trên TCP/IP, lập trình socket | NFR-01 hiệu năng trên LAN |
 | Nhóm phát triển | Dễ bảo trì, kiểm thử, triển khai lại | NFR-05, NFR-07 |
 
 ### 2.4. Ràng buộc
 
-- C1. Kiến trúc client–server; mọi giao tiếp qua HTTP, dữ liệu JSON (trừ tải tệp).
-- C2. Server viết bằng Java 21, Spring Boot 3.3; CSDL PostgreSQL 16.
+- C1. Kiến trúc client–server tách biệt; mọi giao tiếp qua **TCP socket** (`Socket` ↔ `ServerSocket`), dữ liệu JSON, tệp mã hóa base64.
+- C2. Server viết bằng Java 21, Spring Boot 3.3 (không web); client là ứng dụng desktop Java 21 Swing; CSDL PostgreSQL 16.
 - C3. Không dùng dịch vụ AI hay API bên ngoài.
 - C4. Chạy được trong một mạng LAN không có Internet (phòng máy).
 - C5. Giao diện và nội dung bằng tiếng Việt.
@@ -140,7 +142,7 @@ API tương ứng ghi ở [`DAC-TA-TRIEN-KHAI.md`](DAC-TA-TRIEN-KHAI.md) mục 6
   3. Hệ thống cấp token (hiệu lực 8 giờ), trả thông tin người dùng và vai.
   4. Client chuyển tới trang theo vai: khung chat (Sinh viên), trang nội dung (Giáo vụ), trang quản trị (Quản trị viên).
 - **Ngoại lệ:** 2a. Sai mật khẩu, tài khoản khóa hoặc không thuộc CNTT → báo "Thông tin đăng nhập không đúng", không nói rõ lý do.
-- **Hậu điều kiện:** client giữ token để gửi kèm các request sau.
+- **Hậu điều kiện:** client giữ kết nối TCP và token để gửi kèm các yêu cầu sau.
 
 **UC02 — Đăng xuất**
 
@@ -240,12 +242,12 @@ API tương ứng ghi ở [`DAC-TA-TRIEN-KHAI.md`](DAC-TA-TRIEN-KHAI.md) mục 6
 
 **UC15 — Khóa / mở tài khoản**
 
-- **Luồng chính:** quản trị viên chọn khóa hoặc mở một tài khoản; hệ thống cập nhật trạng thái. Tài khoản bị khóa bị từ chối ngay ở request kế tiếp (BR02).
+- **Luồng chính:** quản trị viên chọn khóa hoặc mở một tài khoản; hệ thống cập nhật trạng thái. Tài khoản bị khóa bị từ chối ngay ở yêu cầu kế tiếp (BR02).
 - **Ngoại lệ:** tự khóa chính mình → từ chối (BR04).
 
 **UC16 — Phân quyền**
 
-- **Luồng chính:** quản trị viên chọn một trong ba vai cho tài khoản; hệ thống cập nhật. Vai mới có hiệu lực ngay ở request kế tiếp.
+- **Luồng chính:** quản trị viên chọn một trong ba vai cho tài khoản; hệ thống cập nhật. Vai mới có hiệu lực ngay ở yêu cầu kế tiếp.
 - **Ngoại lệ:** tự đổi vai của chính mình → từ chối (BR04).
 
 **UC20 — Kiểm tra trạng thái hệ thống**
@@ -290,13 +292,13 @@ tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục t�
 
 ### 5.1. Giao diện người dùng
 
-- UI-1. Trang đăng nhập; sau đăng nhập có thanh điều hướng theo vai.
-- UI-2. **Khung chat:** hàng nút chủ đề → hàng nút câu hỏi → bong bóng câu trả lời có nhãn nguồn
-  "Tên tài liệu · trang N"; bấm nhãn mở tệp gốc. Luôn có nút "Chọn chủ đề khác".
-- UI-3. Danh sách hội thoại bên trái (máy tính) hoặc trong menu (điện thoại).
-- UI-4. Trang giáo vụ: bảng tài liệu (tải lên, sửa tiêu đề, gỡ), danh sách chủ đề kéo thả thứ tự, biểu
-  mẫu câu hỏi chọn tài liệu nguồn từ danh sách và nhập số trang.
-- UI-5. Trang quản trị: bảng tài khoản có ô tìm kiếm, công tắc khóa / mở, ô chọn vai; trang trạng thái hệ thống.
+- UI-1. Màn đăng nhập (kèm ô IP và cổng máy chủ); sau đăng nhập có các tab theo vai.
+- UI-2. **Khung chat:** chọn chủ đề → các nút câu hỏi → bong bóng câu trả lời có nhãn nguồn
+  "Tên tài liệu — trang N"; bấm nhãn tải và mở tệp gốc. Luôn đổi được chủ đề.
+- UI-3. Danh sách hội thoại ở cột trái, có nút "Hội thoại mới".
+- UI-4. Tab giáo vụ: bảng tài liệu (tải lên, sửa tiêu đề, gỡ), danh sách chủ đề, biểu mẫu câu hỏi chọn
+  tài liệu nguồn từ danh sách và nhập số trang.
+- UI-5. Tab quản trị: bảng tài khoản có ô tìm kiếm, nút khóa / mở, ô chọn vai; tab trạng thái hệ thống (kèm độ trễ ping).
 - UI-6. Thông báo lỗi bằng tiếng Việt, nói rõ việc người dùng cần làm.
 
 ### 5.2. Giao diện phần mềm
@@ -307,10 +309,11 @@ tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục t�
 
 ### 5.3. Giao diện truyền thông
 
-- HTTP/1.1 trên TCP, cổng mặc định 8080; HTTPS khi triển khai ngoài LAN.
-- REST, dữ liệu JSON UTF-8; tải lên `multipart/form-data`; tải tệp trả luồng nhị phân.
-- Xác thực bằng header `Authorization: Bearer <token>`.
-- Mỗi thao tác là một cặp request / response; không dùng kết nối giữ lâu (SSE, WebSocket).
+- TCP/IP, lập trình socket: client `java.net.Socket` ↔ server `java.net.ServerSocket`, cổng mặc định 9090.
+- Mỗi thông điệp đóng khung: 4 byte độ dài (big-endian) + JSON UTF-8; tối đa 32 MB. Tệp gửi dạng base64.
+- Yêu cầu `{ id, action, token, data }` → phản hồi `{ id, ok, data | error }`; xác thực bằng trường `token` (JWT).
+- Một kết nối TCP giữ suốt phiên đăng nhập; mỗi thao tác là một cặp khung yêu cầu / phản hồi.
+- Server phục vụ nhiều client đồng thời (mỗi kết nối một luồng). Chi tiết: `DAC-TA-TRIEN-KHAI.md` mục 6.
 
 ---
 
@@ -318,13 +321,13 @@ tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục t�
 
 | Mã | Loại | Yêu cầu | Cách kiểm |
 |---|---|---|---|
-| NFR-01 | Hiệu năng | Phân vị 95 (p95) thời gian phản hồi < 2 giây cho mọi request trừ tải lên, với 10 client đồng thời trong LAN | JMeter 10 luồng; đối chiếu bằng Wireshark |
+| NFR-01 | Hiệu năng | Phân vị 95 (p95) thời gian phản hồi < 2 giây cho mọi yêu cầu trừ tải lên, với 10 client đồng thời trong LAN | `SocketIntegrationTest` P4 (10 client đồng thời); đối chiếu bằng Wireshark (`tcp.port == 9090`) |
 | NFR-02 | Bảo mật | Mật khẩu băm BCrypt; token ký HMAC, hết hạn 8 giờ; mọi kiểm quyền ở server; không tiết lộ lý do đăng nhập thất bại; tệp lưu tên ngẫu nhiên, chỉ nhận PDF/DOCX ≤ 20 MB | Kịch bản kiểm thử 1–5, 9 (`DAC-TA-TRIEN-KHAI.md` mục 9) |
 | NFR-03 | Toàn vẹn | Lưu tin nhắn, tài liệu, đổi vai trong transaction; ràng buộc khóa ngoại ở CSDL | Kịch bản 10–13 |
-| NFR-04 | Khả dụng | Từ lúc mở khung chat tới khi thấy câu trả lời ≤ 3 lần bấm; dùng được trên điện thoại (màn hình ≥ 360 px) | Kiểm thử thủ công |
+| NFR-04 | Khả dụng | Từ lúc mở khung chat tới khi thấy câu trả lời ≤ 3 lần bấm; cửa sổ dùng tốt từ 1024 × 700 | Kiểm thử thủ công |
 | NFR-05 | Bảo trì | Mã chia theo 4 module M1–M4; lược đồ quản lý bằng migration; có bộ kiểm thử tích hợp cho 14 kịch bản | Review mã, `mvn test` |
-| NFR-06 | Tương thích | Chrome, Edge, Firefox bản hiện hành; Java 21; PostgreSQL 16 | Kiểm thử thủ công |
-| NFR-07 | Triển khai | Chạy toàn bộ bằng một lệnh `docker compose up` trong LAN không có Internet | Thử trên máy phòng lab |
+| NFR-06 | Tương thích | Client chạy trên Windows, macOS, Linux có Java 21; PostgreSQL 16 | Kiểm thử thủ công |
+| NFR-07 | Triển khai | Server + CSDL chạy bằng một lệnh `docker compose up`; client là một tệp `java -jar` trong LAN không có Internet | Thử trên máy phòng lab |
 | NFR-08 | Tin cậy | Có trang trạng thái hệ thống (UC20); lỗi CSDL không làm server dừng | Kịch bản 14 |
 
 ---
@@ -334,7 +337,7 @@ tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục t�
 | Mã | Quy tắc |
 |---|---|
 | BR01 | Tài khoản phải đang hoạt động và thuộc khoa CNTT mới được đăng nhập và sử dụng. |
-| BR02 | Mỗi request kiểm tra lại quyền từ CSDL; khóa tài khoản hoặc đổi vai có hiệu lực ngay ở request sau. |
+| BR02 | Mỗi yêu cầu kiểm tra lại quyền từ CSDL; khóa tài khoản hoặc đổi vai có hiệu lực ngay ở yêu cầu sau. |
 | BR03 | Sinh viên chỉ đọc; giáo vụ và quản trị viên mới ghi nội dung; chỉ quản trị viên đổi tài khoản. |
 | BR04 | Quản trị viên không tự khóa hay tự hạ vai của chính mình. |
 | BR05 | Hội thoại thuộc riêng người tạo; mở nguồn và tệp gốc phải đăng nhập. |
@@ -356,22 +359,22 @@ tệp tài liệu xóa cùng bản ghi ở UC12. Sao lưu CSDL và thư mục t�
 
 ## Phụ lục A. Ma trận truy vết
 
-| Use case | Module | API (`DAC-TA-TRIEN-KHAI.md` mục 6) | Bảng | Quy tắc |
+| Use case | Module | Action socket (`DAC-TA-TRIEN-KHAI.md` mục 6) | Bảng | Quy tắc |
 |---|---|---|---|---|
-| UC01 Đăng nhập | M1 | `POST /api/auth/login` | users | BR01 |
-| UC02 Đăng xuất | M1 | — (client) | — | — |
-| UC03 Xem thông tin cá nhân | M1 | `GET /api/auth/me` | users | BR02 |
-| UC04 Đổi mật khẩu | M1 | `PUT /api/auth/password` | users | BR02 |
-| UC05 Chọn câu hỏi, nhận trả lời | M2 | `GET /api/topics`, `GET /api/topics/{id}/questions`, `POST /api/chat` | topics, questions, documents, conversations, messages | BR05, BR06 |
-| UC06 Xem lại hội thoại | M2 | `GET /api/conversations`, `GET /api/conversations/{id}` | conversations, messages, questions | BR05 |
-| UC08 Xem nguồn trích dẫn | M2 | `GET /api/documents/{id}/file` | documents | BR05 |
-| UC07 Tra cứu kho tài liệu | M3 | `GET /api/documents` | documents | — |
-| UC10 Tải lên tài liệu | M3 | `POST /api/documents` | documents | BR03 |
-| UC11 Sửa thông tin tài liệu | M3 | `PATCH /api/documents/{id}` | documents | BR03 |
-| UC12 Gỡ tài liệu | M3 | `DELETE /api/documents/{id}` | documents, questions | BR03, BR06 |
-| UC22 Quản lý chủ đề | M3 | `POST/PATCH/DELETE /api/topics` | topics | BR03 |
-| UC23 Quản lý câu hỏi – câu trả lời | M3 | `GET /api/admin/questions`, `POST/PATCH/DELETE /api/questions` | questions | BR03, BR06 |
-| UC14 Tra cứu người dùng | M4 | `GET /api/users` | users | BR03 |
-| UC15 Khóa / mở tài khoản | M4 | `PATCH /api/users/{id}` | users | BR02, BR04 |
-| UC16 Phân quyền | M4 | `PATCH /api/users/{id}` | users | BR02, BR04 |
-| UC20 Kiểm tra trạng thái hệ thống | M4 | `GET /api/health` | — | BR03 |
+| UC01 Đăng nhập | M1 | `auth.login` | users | BR01 |
+| UC02 Đăng xuất | M1 | — (client đóng kết nối TCP) | — | — |
+| UC03 Xem thông tin cá nhân | M1 | `auth.me` | users | BR02 |
+| UC04 Đổi mật khẩu | M1 | `auth.changePassword` | users | BR02 |
+| UC05 Chọn câu hỏi, nhận trả lời | M2 | `topic.list`, `topic.questions`, `chat.ask` | topics, questions, documents, conversations, messages | BR05, BR06 |
+| UC06 Xem lại hội thoại | M2 | `conversation.list`, `conversation.get` | conversations, messages, questions | BR05 |
+| UC08 Xem nguồn trích dẫn | M2 | `document.download` | documents | BR05 |
+| UC07 Tra cứu kho tài liệu | M3 | `document.list`, `document.get` | documents | — |
+| UC10 Tải lên tài liệu | M3 | `document.upload` | documents | BR03 |
+| UC11 Sửa thông tin tài liệu | M3 | `document.rename` | documents | BR03 |
+| UC12 Gỡ tài liệu | M3 | `document.delete` | documents, questions | BR03, BR06 |
+| UC22 Quản lý chủ đề | M3 | `topic.create`, `topic.update`, `topic.delete` | topics | BR03 |
+| UC23 Quản lý câu hỏi – câu trả lời | M3 | `question.listForEditor`, `question.create`, `question.update`, `question.hide` | questions | BR03, BR06 |
+| UC14 Tra cứu người dùng | M4 | `user.list` | users | BR03 |
+| UC15 Khóa / mở tài khoản | M4 | `user.update {active}` | users | BR02, BR04 |
+| UC16 Phân quyền | M4 | `user.update {role}` | users | BR02, BR04 |
+| UC20 Kiểm tra trạng thái hệ thống | M4 | `system.health`, `system.ping` | — | BR03 |

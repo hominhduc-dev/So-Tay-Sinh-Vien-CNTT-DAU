@@ -15,7 +15,7 @@
     <artifactId>tangthu-server</artifactId>
     <version>2.0.0</version>
     <name>Sổ Tay Sinh Viên CNTT — server</name>
-    <description>Chatbot hỏi đáp học vụ dạng nút chọn, mô hình client–server</description>
+    <description>Server TCP socket — mô hình client–server</description>
 
     <properties>
         <java.version>21</java.version>
@@ -24,17 +24,19 @@
     </properties>
 
     <dependencies>
+        <!-- JSON cho giao thức socket (không dùng Tomcat / HTTP) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-json</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
+        <!-- Chỉ dùng BCrypt để băm mật khẩu -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -88,11 +90,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

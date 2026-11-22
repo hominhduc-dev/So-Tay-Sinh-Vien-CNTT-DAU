@@ -1,34 +1,35 @@
 package vn.tangthu.common.exception;
 
-import org.springframework.http.HttpStatus;
-
-/** Lỗi nghiệp vụ trả về client dạng {@code {"error": {"code", "message"}}}. */
+/**
+ * Lỗi nghiệp vụ. Bộ điều phối socket chuyển thành phản hồi
+ * {@code {"ok": false, "error": {"code", "message"}}} gửi về client.
+ */
 public class ApiException extends RuntimeException {
-    private final HttpStatus status;
     private final String code;
 
-    public ApiException(HttpStatus status, String code, String message) {
+    public ApiException(String code, String message) {
         super(message);
-        this.status = status;
         this.code = code;
     }
 
-    public HttpStatus getStatus() { return status; }
     public String getCode() { return code; }
 
     public static ApiException badRequest(String code, String message) {
-        return new ApiException(HttpStatus.BAD_REQUEST, code, message);
+        return new ApiException(code, message);
     }
     public static ApiException validation(String message) {
-        return badRequest("VALIDATION_ERROR", message);
+        return new ApiException("VALIDATION_ERROR", message);
     }
     public static ApiException unauthorized(String message) {
-        return new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", message);
+        return new ApiException("UNAUTHORIZED", message);
+    }
+    public static ApiException forbidden(String message) {
+        return new ApiException("FORBIDDEN", message);
     }
     public static ApiException notFound(String code, String message) {
-        return new ApiException(HttpStatus.NOT_FOUND, code, message);
+        return new ApiException(code, message);
     }
     public static ApiException conflict(String code, String message) {
-        return new ApiException(HttpStatus.CONFLICT, code, message);
+        return new ApiException(code, message);
     }
 }
