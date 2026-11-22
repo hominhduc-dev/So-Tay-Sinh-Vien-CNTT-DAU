@@ -114,26 +114,41 @@ public class ContentPanel extends JPanel {
     }
 
     private void addTopic() {
-        String name = JOptionPane.showInputDialog(this, "Tên chủ đề mới");
-        if (name == null || name.isBlank()) return;
-        Async.run(this, () -> topics.create(name.trim(), null), t -> reloadTopics(t.id()));
+        TopicDialog.TopicInput input = TopicDialog.show(this, "Thêm chủ đề mới", null);
+        if (input == null) return;
+        Async.run(this, () -> topics.create(input.name(), input.sortOrder()), t -> reloadTopics(t.id()));
     }
 
     private void editTopic() {
         Topic t = topicList.getSelectedValue();
-        if (t == null) return;
-        String name = JOptionPane.showInputDialog(this, "Đổi tên chủ đề", t.name());
-        if (name == null || name.isBlank()) return;
-        Async.run(this, () -> topics.update(t.id(), name.trim(), null), x -> reloadTopics(t.id()));
+        if (t == null) {
+            Ui.info(this, "Vui lòng chọn một chủ đề trong danh sách để sửa.");
+            return;
+        }
+        TopicDialog.TopicInput input = TopicDialog.show(this, "Sửa chủ đề", t);
+        if (input == null) return;
+        Async.run(this, () -> topics.update(t.id(), input.name(), input.sortOrder()), x -> reloadTopics(t.id()));
     }
 
     private void deleteTopic() {
         Topic t = topicList.getSelectedValue();
-        if (t == null || !Ui.confirm(this, "Xóa chủ đề \"" + t.name() + "\"? (chỉ xóa được chủ đề chưa có câu hỏi)")) return;
+        if (t == null) {
+            Ui.info(this, "Vui lòng chọn một chủ đề trong danh sách để xóa.");
+            return;
+        }
+        if (!Ui.confirm(this, "Xóa chủ đề \"" + t.name() + "\"?\n(Lưu ý: Chỉ xóa được chủ đề chưa có câu hỏi nào)")) {
+            return;
+        }
         Async.run(this, () -> {
             topics.delete(t.id());
             return null;
-        }, x -> reloadTopics(null));
+        }, x -> reloadTopics(null), err -> {
+            if ("TOPIC_NOT_EMPTY".equals(err.getCode())) {
+                Ui.error(this, "Chủ đề này đang chứa câu hỏi (kể cả câu hỏi đã ẩn).\nVui lòng xóa hoặc chuyển các câu hỏi sang chủ đề khác trước khi xóa chủ đề.");
+            } else {
+                Async.showError(this, err);
+            }
+        });
     }
 
     // ---------- câu hỏi ----------
