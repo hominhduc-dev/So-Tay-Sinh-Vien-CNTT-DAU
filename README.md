@@ -180,7 +180,8 @@ Mỗi thành viên phụ trách trọn **một module ở cả server và client
 | Tệp | Nội dung |
 |---|---|
 | [`docs/reports/bao-cao-so-tay-sinh-vien-cntt.docx`](docs/reports/bao-cao-so-tay-sinh-vien-cntt.docx) | Báo cáo phân tích và thiết kế hệ thống |
-| [`docs/diagrams/so-do-he-thong.drawio`](docs/diagrams/so-do-he-thong.drawio) | 31 trang sơ đồ: use case, BFD, ngữ cảnh, **kiến trúc TCP socket**, **cấu trúc MVC client – server**, ERD, **vòng đời kết nối TCP**, tuần tự UC01–UC23 (theo action socket), sơ đồ lớp |
+| [`docs/diagrams/so-do-he-thong.drawio`](docs/diagrams/so-do-he-thong.drawio) | 56 trang sơ đồ UML và phân tích: use case (tổng quan + 4 module), ngữ cảnh, kiến trúc TCP socket, cấu trúc MVC, **thành phần, triển khai, gói**, ERD, tuần tự (kết nối TCP + 17 UC), **hoạt động 17 UC**, sơ đồ lớp, **5 sơ đồ trạng thái**, BFD |
+| [`docs/DAC-TA-USE-CASE.md`](docs/DAC-TA-USE-CASE.md) | Đặc tả đầy đủ 17 use case: tác nhân, tiền / hậu điều kiện, luồng chính, thay thế, ngoại lệ, action socket, sơ đồ đi kèm |
 | [`docs/SRS.md`](docs/SRS.md) | Đặc tả yêu cầu phần mềm: phạm vi, tác nhân, 17 use case, yêu cầu dữ liệu, giao diện, phi chức năng, quy tắc nghiệp vụ, ma trận truy vết |
 | [`docs/DAC-TA-TRIEN-KHAI.md`](docs/DAC-TA-TRIEN-KHAI.md) | Đặc tả triển khai: lược đồ CSDL, **giao thức TCP socket** (mục 6), luồng xử lý, hiện thực server / client, kịch bản kiểm thử |
 | [`docs/slides/SRS-tac-nhan-va-use-case.pptx`](docs/slides/SRS-tac-nhan-va-use-case.pptx) | Slide SRS: tác nhân, use case, ma trận quyền, input / output, luồng |

@@ -180,6 +180,10 @@ public class ChatPanel extends JPanel {
                 heading.setText(q.content());
             }
             reloadHistory();
+        }, err -> {
+            Async.showError(this, err);
+            // UC05 ngoại lệ 4a: câu hỏi vừa bị giáo vụ ẩn → tải lại các nút của chủ đề
+            if ("QUESTION_NOT_FOUND".equals(err.getCode())) reloadQuestions();
         });
     }
 
