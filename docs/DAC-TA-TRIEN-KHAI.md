@@ -262,7 +262,7 @@ Hai phía dùng cùng lớp `FrameCodec` (`DataOutputStream.writeInt` + `write`,
 | Xác thực, quyền | `UNAUTHORIZED` (thiếu / sai token, tài khoản khóa, không thuộc CNTT), `FORBIDDEN` (thiếu vai), `WRONG_PASSWORD`, `SELF_MODIFICATION` |
 | Dữ liệu | `VALIDATION_ERROR`, `QUESTION_NOT_FOUND`, `CONVERSATION_NOT_FOUND`, `TOPIC_NOT_FOUND`, `DOCUMENT_NOT_FOUND`, `USER_NOT_FOUND` |
 | Xung đột | `DUPLICATE_DOCUMENT`, `DOCUMENT_IN_USE`, `TOPIC_NOT_EMPTY`, `TOPIC_NAME_TAKEN`, `CONFLICT` |
-| Tệp | `UNSUPPORTED_FILE` (không phải PDF / DOCX), `FILE_TOO_LARGE` (> 20 MB) |
+| Tệp | `UNSUPPORTED_FILE` (không phải PDF / DOCX), `FILE_TOO_LARGE` (> 20 MB), `FILE_NOT_FOUND` (bản ghi còn trong CSDL nhưng tệp trên đĩa đã mất) |
 | Khác | `INTERNAL_ERROR` |
 
 **Ví dụ một phiên** (mỗi dòng là một khung):
