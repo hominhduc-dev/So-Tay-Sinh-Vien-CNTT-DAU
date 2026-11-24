@@ -17,6 +17,9 @@ uploads/
 # Bản dump CSDL — chứa dữ liệu sinh viên thật
 backup/
 
+# Run configuration của IntelliJ — chứa DB_PASSWORD và JWT_SECRET của máy cá nhân
+.run/
+
 # IDE, hệ điều hành
 .idea/
 *.iml
