@@ -3,11 +3,10 @@ package vn.tangthu.client.chat.view;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.util.List;
 import java.util.UUID;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -29,12 +28,17 @@ import vn.tangthu.client.common.view.FileOpener;
 import vn.tangthu.client.common.view.Ui;
 import vn.tangthu.client.content.controller.DocumentController;
 import vn.tangthu.client.content.controller.TopicController;
+import vn.tangthu.client.content.model.DownloadedFile;
 import vn.tangthu.client.content.model.QuestionButton;
 import vn.tangthu.client.content.model.Topic;
 
 /**
- * M2 · Hỏi đáp. Trái: lịch sử hội thoại (UC06). Giữa: các lượt hỏi – đáp. Phải: chọn chủ đề → bấm câu hỏi (UC05).
- * Bấm vào nguồn để tải tệp gốc qua socket và mở đúng tài liệu (UC08).
+ * M2 · Hỏi đáp — bố cục ba cột cố định, mở/đóng tài liệu không làm xê dịch:
+ * <ul>
+ *   <li>Trái: lịch sử hội thoại (UC06).</li>
+ *   <li>Giữa: các lượt hỏi – đáp; bên dưới là chọn chủ đề, rồi hàng nút câu hỏi cuộn ngang (UC05).</li>
+ *   <li>Phải: cột nguồn — bấm vào nguồn để tải tệp gốc qua socket, PDF hiện đúng trang trích dẫn (UC08).</li>
+ * </ul>
  */
 public class ChatPanel extends JPanel {
     private final ChatController chat;
@@ -46,7 +50,10 @@ public class ChatPanel extends JPanel {
     private final JEditorPane transcript = new JEditorPane("text/html", "");
     private final JLabel heading = new JLabel();
     private final JComboBox<Topic> topicBox = new JComboBox<>();
-    private final JPanel questionButtons = new JPanel();
+    private final JPanel questionButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+    private final JScrollPane questionScroll = new JScrollPane(questionButtons,
+            JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+    private final SourcePanel source = new SourcePanel();
     private final StringBuilder html = new StringBuilder();
     private UUID conversationId;
     private boolean loadingHistory;
@@ -59,8 +66,10 @@ public class ChatPanel extends JPanel {
         Ui.pad(this, 10);
 
         add(buildHistory(), BorderLayout.WEST);
-        add(buildTranscript(), BorderLayout.CENTER);
-        add(buildQuestions(), BorderLayout.EAST);
+        JPanel conversation = buildTranscript();
+        conversation.add(buildQuestions(), BorderLayout.SOUTH);
+        add(conversation, BorderLayout.CENTER);
+        add(source, BorderLayout.EAST);
 
         newConversation();
         reloadTopics();
@@ -120,24 +129,28 @@ public class ChatPanel extends JPanel {
         return p;
     }
 
-    // ---------- phải: chọn câu hỏi ----------
+    // ---------- dưới khung chat: chủ đề ở trên, hàng nút câu hỏi cuộn ngang ở dưới ----------
     private JPanel buildQuestions() {
         JPanel p = new JPanel(new BorderLayout(0, 8));
-        p.setPreferredSize(new Dimension(300, 0));
-        JPanel top = new JPanel(new BorderLayout(0, 4));
-        top.add(new JLabel("Chủ đề"), BorderLayout.NORTH);
-        top.add(topicBox, BorderLayout.CENTER);
-        p.add(top, BorderLayout.NORTH);
+        p.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Bấm vào câu hỏi"),
+                BorderFactory.createEmptyBorder(2, 6, 4, 6)));
+
+        JPanel topicRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        topicRow.add(new JLabel("Chủ đề"));
+        topicBox.setPreferredSize(new Dimension(320, topicBox.getPreferredSize().height));
+        topicRow.add(topicBox);
+        p.add(topicRow, BorderLayout.NORTH);
         topicBox.addActionListener(e -> reloadQuestions());
 
-        questionButtons.setLayout(new BoxLayout(questionButtons, BoxLayout.Y_AXIS));
-        JPanel holder = new JPanel(new BorderLayout());
-        holder.add(questionButtons, BorderLayout.NORTH);
-        JScrollPane s = new JScrollPane(holder, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        s.setBorder(BorderFactory.createTitledBorder("Bấm vào câu hỏi"));
-        s.getVerticalScrollBar().setUnitIncrement(16);
-        p.add(s, BorderLayout.CENTER);
+        // Một hàng nút đủ chữ; dài hơn bề ngang thì cuộn ngang (kéo thanh cuộn, lăn chuột hoặc Shift + lăn).
+        // Chiều cao cố định = một nút + thanh cuộn ngang, để thanh cuộn hiện/ẩn cũng không đẩy bố cục.
+        int buttonHeight = new JButton("Câu hỏi").getPreferredSize().height;
+        int barHeight = questionScroll.getHorizontalScrollBar().getPreferredSize().height;
+        questionScroll.setPreferredSize(new Dimension(0, buttonHeight + barHeight + 8));
+        questionScroll.setBorder(null);
+        questionScroll.getHorizontalScrollBar().setUnitIncrement(32);
+        p.add(questionScroll, BorderLayout.CENTER);
         return p;
     }
 
@@ -159,15 +172,13 @@ public class ChatPanel extends JPanel {
         questionButtons.removeAll();
         if (list.isEmpty()) questionButtons.add(new JLabel("Chủ đề này chưa có câu hỏi."));
         for (QuestionButton q : list) {
-            JButton b = new JButton("<html><body style='width:200px'>" + Ui.esc(q.content()) + "</body></html>");
-            b.setHorizontalAlignment(JButton.LEFT);
-            b.setAlignmentX(Component.LEFT_ALIGNMENT);
+            JButton b = new JButton(q.content());
             b.addActionListener(e -> ask(q));
             questionButtons.add(b);
-            questionButtons.add(Box.createVerticalStrut(6));
         }
         questionButtons.revalidate();
         questionButtons.repaint();
+        SwingUtilities.invokeLater(() -> questionScroll.getHorizontalScrollBar().setValue(0));
     }
 
     // ---------- hành động ----------
@@ -191,7 +202,7 @@ public class ChatPanel extends JPanel {
         conversationId = null;
         heading.setText("Hội thoại mới");
         html.setLength(0);
-        render("<p style='color:#666'>Chọn một chủ đề rồi bấm câu hỏi ở cột bên phải. Mỗi câu trả lời do giáo vụ "
+        render("<p style='color:#666'>Chọn một chủ đề rồi bấm câu hỏi ở khung bên dưới. Mỗi câu trả lời do giáo vụ "
                 + "khoa soạn sẵn, kèm tài liệu nguồn và số trang để bạn tự kiểm chứng.</p>");
     }
 
@@ -217,9 +228,27 @@ public class ChatPanel extends JPanel {
         });
     }
 
+    /** UC08: PDF hiện ở cột nguồn, mở đúng trang trích dẫn; DOCX mở bằng ứng dụng ngoài. */
     private void openSource(UUID documentId, int page) {
-        Async.run(this, () -> documents.download(documentId), f -> FileOpener.open(this, f, page));
+        source.loading("Nguồn — trang " + page);
+        Async.run(this, () -> {
+            DownloadedFile file = documents.download(documentId);
+            int pages = "application/pdf".equals(file.mimeType()) ? CitationPdfViewer.pageCount(file.content()) : 0;
+            return new LoadedSource(file, pages);
+        }, loaded -> {
+            if (loaded.pageCount() > 0) {
+                source.show(loaded.file(), loaded.pageCount(), page);
+            } else {
+                source.clear();
+                FileOpener.open(this, loaded.file(), page);
+            }
+        }, err -> {
+            source.clear();
+            Async.showError(this, err);
+        });
     }
+
+    private record LoadedSource(DownloadedFile file, int pageCount) {}
 
     private void append(Message m) {
         appendNoRender(m);
