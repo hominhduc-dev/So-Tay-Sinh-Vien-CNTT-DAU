@@ -13,3 +13,5 @@
 | `view/` | View — màn hình Swing | ChatPanel |
 
 Phía server: [`server/src/main/java/vn/tangthu/chat/`](../../../../../../../../server/src/main/java/vn/tangthu/chat/).
+
+Bấm nguồn PDF trong câu trả lời: tài liệu hiện ở khung bên cạnh hội thoại (`SourcePanel`), mở đúng trang được trích dẫn, lật được sang trang khác. Tệp DOCX mở bằng ứng dụng ngoài.
